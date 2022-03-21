@@ -1,10 +1,14 @@
 use super::value::Value;
 
 pub struct Function {
-    pub parameter: Vec<Value>,
+    pub parameters: Vec<Value>,
+    pub results: Vec<Value>,
 }
 impl Default for Function {
     fn default() -> Function {
-        Function { parameter: vec![] }
+        Function {
+            parameters: vec![],
+            results: vec![],
+        }
     }
 }

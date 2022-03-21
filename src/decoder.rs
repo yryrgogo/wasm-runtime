@@ -54,12 +54,21 @@ impl Decoder {
 
                 for s_i in 0..signature_count {
                     println!("Signature {}", s_i + 1);
-                    let parameter_count = self.read_unsigned_leb128();
+
                     let mut func = Function::default();
+
+                    let parameter_count = self.read_unsigned_leb128();
                     for p_i in 0..parameter_count {
                         let value = self.decode_type().unwrap();
-                        println!("Parameter Type {:?}", value);
-                        func.parameter.push(value);
+                        println!("Parameter {} Type {:?}", p_i + 1, value);
+                        func.parameters.push(value);
+                    }
+
+                    let result_count = self.read_unsigned_leb128();
+                    for r_i in 0..result_count {
+                        let value = self.decode_type().unwrap();
+                        println!("Result {} Type {:?}", r_i + 1, value);
+                        func.results.push(value);
                     }
                 }
             }
@@ -86,12 +95,11 @@ impl Decoder {
     fn decode_type(&mut self) -> Result<Value, Box<dyn Error>> {
         let mut buf = [0; 1];
         self.reader.read_exact(&mut buf)?;
-        Ok(match ValueType::from_usize(buf[0]).unwrap() {
+        Ok(match ValueType::from_byte(buf[0]).unwrap() {
             ValueType::Int32 => Value::i32(),
             ValueType::Int64 => Value::i64(),
             ValueType::Float32 => Value::f32(),
             ValueType::Float64 => Value::f64(),
-            _ => panic!("Invalid type byte was given: {:x}", buf[0]),
         })
     }
 

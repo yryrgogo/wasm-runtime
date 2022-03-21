@@ -6,13 +6,13 @@ pub enum ValueType {
     Float64,
 }
 impl ValueType {
-    pub fn from_usize(n: u8) -> Option<ValueType> {
-        match n {
+    pub fn from_byte(byte: u8) -> Option<ValueType> {
+        match byte {
             0x7F => Some(ValueType::Int32),
             0x7E => Some(ValueType::Int64),
             0x7D => Some(ValueType::Float32),
             0x7C => Some(ValueType::Float64),
-            _ => panic!("Invalid ValueType {:x}", n),
+            _ => panic!("Invalid ValueType {:x}", byte),
         }
     }
 }
