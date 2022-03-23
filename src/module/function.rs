@@ -1,14 +1,16 @@
-use super::value::Value;
+use super::function_type::FunctionType;
 
+#[derive(Debug)]
 pub struct Function {
-    pub parameters: Vec<Value>,
-    pub results: Vec<Value>,
+    func_type: FunctionType,
 }
-impl Default for Function {
-    fn default() -> Function {
+impl Function {
+    pub fn new(func_type: FunctionType) -> Function {
         Function {
-            parameters: vec![],
-            results: vec![],
+            func_type: func_type,
         }
+    }
+    pub fn inspect(&self) -> String {
+        format!("# type: {}", self.func_type.inspect())
     }
 }

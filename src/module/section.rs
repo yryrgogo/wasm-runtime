@@ -14,7 +14,7 @@ impl SectionId {
             3 => Some(SectionId::FunctionSectionId),
             7 => Some(SectionId::ExportSectionId),
             10 => Some(SectionId::CodeSectionId),
-            _ => panic!("Error: Not implemented"),
+            _ => todo!(),
         }
     }
 }

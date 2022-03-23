@@ -1,10 +1,16 @@
+use self::function::Function;
+use self::function_type::FunctionType;
+
 pub mod function;
+pub mod function_type;
+pub mod number;
 pub mod section;
-pub mod value;
 
 pub struct Module {
     magic_bytes: String,
     version: u8,
+    pub functions: Vec<Function>,
+    pub function_types: Vec<FunctionType>,
 }
 
 impl Default for Module {
@@ -12,6 +18,8 @@ impl Default for Module {
         Self {
             magic_bytes: "\x00\x61\x73\x6D".to_string(),
             version: 1,
+            functions: vec![],
+            function_types: vec![],
         }
     }
 }
@@ -20,13 +28,13 @@ impl Module {
     fn version_bytes(&self, v: Option<u8>) -> &str {
         let version_bytes = match v.unwrap_or(1) {
             1 => "\x01\x00\x00\x00",
-            _ => panic!("Error: Not implemented"),
+            _ => unimplemented!(),
         };
         version_bytes
     }
 
     fn header(&self, v: Option<u8>) -> String {
-        self.magic_bytes.clone() + self.version_bytes(v)
+        format!("{}{}", self.magic_bytes, self.version_bytes(v))
     }
 
     pub fn valid_header(&self, header_string: &String) -> bool {
