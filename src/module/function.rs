@@ -1,6 +1,6 @@
 use super::function_type::FunctionType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
     func_type: FunctionType,
 }

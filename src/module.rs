@@ -1,5 +1,6 @@
 use self::function::Function;
 use self::function_type::FunctionType;
+use std::collections::HashMap;
 
 pub mod function;
 pub mod function_type;
@@ -11,6 +12,7 @@ pub struct Module {
     version: u8,
     pub functions: Vec<Function>,
     pub function_types: Vec<FunctionType>,
+    pub exported: HashMap<String, Function>,
 }
 
 impl Default for Module {
@@ -20,6 +22,7 @@ impl Default for Module {
             version: 1,
             functions: vec![],
             function_types: vec![],
+            exported: HashMap::new(),
         }
     }
 }

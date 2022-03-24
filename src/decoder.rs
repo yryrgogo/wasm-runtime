@@ -2,7 +2,7 @@ use crate::module::{
     function::Function,
     function_type::FunctionType,
     number::{Number, NumberType},
-    section::{SectionId, TypeSection},
+    section::{ExportDesc, SectionId, TypeSection},
     Module,
 };
 use crate::util::byte::byte2string;
@@ -55,11 +55,7 @@ impl Decoder {
                         SectionId::TypeSectionId => self.decode_type_section(&mut module),
                         SectionId::FunctionSectionId => self.decode_function_section(&mut module),
                         SectionId::ExportSectionId => {
-                            println!("Export Section");
-                            match self.discard_section(section_size) {
-                                Ok(()) => println!("Discard section"),
-                                Err(err) => panic!("Failed to discard section {}", err),
-                            }
+                            self.decode_export_section(&mut module).unwrap()
                         }
                         SectionId::CodeSectionId => {
                             println!("Code Section");
@@ -76,6 +72,10 @@ impl Decoder {
 
         for func in module.functions {
             println!("{}", func.inspect());
+        }
+
+        for key in module.exported.keys() {
+            println!("{}: {}", key, module.exported.get(key).unwrap().inspect());
         }
 
         Ok(())
@@ -127,6 +127,42 @@ impl Decoder {
             let func_type = module.function_types[i].clone();
             module.functions.push(Function::new(func_type))
         }
+    }
+
+    fn decode_export_section(&mut self, module: &mut Module) -> Result<(), Box<dyn Error>> {
+        println!("Decode Export Section");
+
+        let export_count = self.read_unsigned_leb128();
+        println!("Export count: {}", export_count);
+        for _ in 0..export_count {
+            let name_size = self.read_unsigned_leb128();
+            let mut name_buf = vec![0; name_size];
+            self.reader.read_exact(&mut name_buf)?;
+            let name = std::str::from_utf8(&name_buf).unwrap();
+
+            let mut desc_buf = [0; 1];
+            self.reader.read_exact(&mut desc_buf)?;
+
+            let mut index_buf = [0; 1];
+            self.reader.read_exact(&mut index_buf)?;
+
+            match ExportDesc::from_usize(desc_buf[0]).unwrap() {
+                ExportDesc::Func => {
+                    if module.exported.contains_key(name) {
+                        panic!("{} key already exists", name);
+                    }
+                    module.exported.insert(
+                        name.to_string(),
+                        module.functions[usize::from(index_buf[0])].clone(),
+                    );
+                }
+                ExportDesc::Table => todo!(),
+                ExportDesc::LinearMemory => todo!(),
+                ExportDesc::GlobalVariable => todo!(),
+            }
+        }
+
+        Ok(())
     }
 
     fn decode_type(&mut self) -> Result<Number, Box<dyn Error>> {

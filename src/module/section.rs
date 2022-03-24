@@ -28,3 +28,22 @@ impl TypeSection {
         }
     }
 }
+
+pub enum ExportDesc {
+    Func = 0x00,
+    Table = 0x01,
+    LinearMemory = 0x02,
+    GlobalVariable = 0x03,
+}
+
+impl ExportDesc {
+    pub fn from_usize(n: u8) -> Option<ExportDesc> {
+        match n {
+            0 => Some(ExportDesc::Func),
+            1 => Some(ExportDesc::Table),
+            2 => Some(ExportDesc::LinearMemory),
+            3 => Some(ExportDesc::GlobalVariable),
+            _ => panic!("Invalid Export Desc {}", n),
+        }
+    }
+}
