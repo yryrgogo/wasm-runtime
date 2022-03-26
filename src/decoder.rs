@@ -1,12 +1,14 @@
 use crate::module::{
-    function::Function,
+    function::{Block, Function},
     function_type::FunctionType,
     number::{Number, NumberType},
+    opcode::OpCode,
     section::{ExportDesc, SectionId, TypeSection},
     Module,
 };
 use crate::util::byte::byte2string;
 use std::{
+    collections::HashMap,
     error::Error,
     fs::File,
     io::{BufReader, Read},
@@ -197,10 +199,55 @@ impl Decoder {
             module.functions[func_idx].expressions = expression_buf;
 
             println!("{}", module.functions[func_idx].inspect());
+
+            let mut expressions = module.functions[func_idx].expressions.clone();
+            let mut blocks: HashMap<usize, Block> = HashMap::new();
+
+            let mut block_stack = vec![Block::new(expressions.clone(), 0)];
+
+            expressions.reverse();
+            loop {
+                if expressions.len() == 0 {
+                    break;
+                }
+                match self.read_next_structured_instruction(&mut expressions) {
+                    Some(structured_instruction) => {
+                        let idx = func_body_size - expressions.len() - 2;
+                        match OpCode::from_byte(structured_instruction) {
+                            OpCode::End => {
+                                let mut block = block_stack.pop().unwrap();
+                                block.end_idx = idx;
+                                block.instructions = module.functions[func_idx].expressions
+                                    [block.start_idx..block.end_idx]
+                                    .to_vec();
+                                blocks.insert(block.start_idx, block);
+                            }
+                            _ => {
+                                println!("SI byte: {:x} idx: {}", structured_instruction, idx);
+
+                                let block = Block::new(vec![], idx);
+                                block_stack.push(block);
+                            }
+                        };
+                    }
+                    None => {}
+                };
+            }
         }
 
+        // println!("Expression");
+        // for i in 0..module.functions[0].expressions.len() {
+        //     println!(
+        //         "{}: {}, {:x}, {:b}",
+        //         i,
+        //         module.functions[0].expressions[i],
+        //         module.functions[0].expressions[i],
+        //         module.functions[0].expressions[i]
+        //     );
+        // }
+
         println!("Rest binary");
-        for i in 0..10 {
+        for i in 0..100 {
             let mut buf = [0; 1];
             self.reader.read_exact(&mut buf).unwrap();
             println!("{}: {}, {:x}, {:b}", i, buf[0], buf[0], buf[0]);
@@ -211,6 +258,41 @@ impl Decoder {
         let mut buf = [0; 1];
         self.reader.read_exact(&mut buf)?;
         NumberType::decode_type(buf[0])
+    }
+
+    fn read_next_structured_instruction(&mut self, expression: &mut Vec<u8>) -> Option<u8> {
+        let mut byte;
+        loop {
+            if expression.len() == 0 {
+                return None;
+            }
+            byte = expression.pop().unwrap();
+            match OpCode::from_byte(byte) {
+                OpCode::Block | OpCode::Loop | OpCode::If | OpCode::End => {
+                    // println!("block or loop or if or end");
+                    break;
+                }
+                OpCode::Br | OpCode::BrIf => {
+                    // println!("br or br_if");
+                    Decoder::decode_unsigned_leb128(expression);
+                }
+                OpCode::GetLocal
+                | OpCode::SetLocal
+                | OpCode::TeeLocal
+                | OpCode::GetGlobal
+                | OpCode::SetGlobal => {
+                    // println!("get/set local/global");
+                    Decoder::decode_unsigned_leb128(expression);
+                }
+                OpCode::I32Const | OpCode::I64Const | OpCode::F32Const | OpCode::F64Const => {
+                    // println!("constants");
+                    Decoder::decode_signed_leb128(expression);
+                }
+                _ => {}
+            };
+        }
+
+        Some(byte)
     }
 
     fn discard_section(&mut self, size: usize) -> Result<(), Box<dyn Error>> {
@@ -229,21 +311,42 @@ impl Decoder {
         let mut byte_count: usize = 0;
 
         loop {
-            match self.reader.read_exact(&mut buf) {
-                Ok(()) => {
-                    value |= ((buf[0] & 0x7F) as usize) << shift;
-                    shift += 7;
-                    byte_count += 1;
+            self.reader.read_exact(&mut buf).unwrap();
+            value |= ((buf[0] & 0x7F) as usize) << shift;
+            shift += 7;
+            byte_count += 1;
 
-                    if ((buf[0] >> 7) & 1) != 1 {
-                        break;
-                    }
-                    if shift > UNSIGNED_LEB128_MAX_BITS {
-                        panic!("Invalid LEB128 encoding");
-                    }
-                }
-                Err(err) => panic!("Failed to read buffer {}", err),
+            if ((buf[0] >> 7) & 1) != 1 {
+                break;
             }
+            if shift > UNSIGNED_LEB128_MAX_BITS {
+                panic!("Invalid LEB128 encoding");
+            }
+        }
+        [value, byte_count]
+    }
+
+    fn read_signed_leb128(&mut self) -> [usize; 2] {
+        let mut value: usize = 0;
+        let mut shift: usize = 0;
+        let mut buf: [u8; 1] = [0; 1];
+        let mut byte_count: usize = 0;
+
+        loop {
+            self.reader.read_exact(&mut buf).unwrap();
+            value |= ((buf[0] & 0x7F) as usize) << shift;
+            shift += 7;
+            byte_count += 1;
+
+            if ((buf[0] >> 7) & 1) != 1 {
+                break;
+            }
+            if shift > UNSIGNED_LEB128_MAX_BITS {
+                panic!("Invalid LEB128 encoding");
+            }
+        }
+        if (value >> (shift - 1)) & 1 == 1 {
+            value |= !0 << shift;
         }
         [value, byte_count]
     }
@@ -266,6 +369,31 @@ impl Decoder {
                 panic!("Invalid LEB128 encoding");
             }
         }
+        [value, byte_count]
+    }
+
+    fn decode_signed_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
+        let mut value: usize = 0;
+        let mut shift: usize = 0;
+        let mut byte_count: usize = 0;
+
+        loop {
+            let byte = buf.pop().unwrap();
+            value |= ((byte & 0x7F) as usize) << shift;
+            shift += 7;
+
+            if ((byte >> 7) & 1) != 1 {
+                break;
+            }
+            byte_count += 1;
+            if shift > UNSIGNED_LEB128_MAX_BITS {
+                panic!("Invalid LEB128 encoding");
+            }
+        }
+        if (value >> (shift - 1)) & 1 == 1 {
+            value |= !0 << shift;
+        }
+
         [value, byte_count]
     }
 }

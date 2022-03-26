@@ -6,4 +6,7 @@
   "files.watcherExclude": {
     "**/target": true
   },
+  "cSpell.words": [
+    "arity"
+  ],
 }

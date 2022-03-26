@@ -27,3 +27,19 @@ impl Function {
         )
     }
 }
+
+pub struct Block {
+    pub instructions: Vec<u8>,
+    pub start_idx: usize,
+    pub end_idx: usize,
+}
+
+impl Block {
+    pub fn new(instructions: Vec<u8>, start_idx: usize) -> Block {
+        Block {
+            instructions: instructions,
+            start_idx: start_idx,
+            end_idx: 0,
+        }
+    }
+}

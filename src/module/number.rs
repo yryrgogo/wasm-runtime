@@ -35,7 +35,7 @@ impl NumberType {
 #[derive(Debug, Clone, Copy)]
 pub struct Number {
     bits: u8,
-    num_type: NumberType,
+    pub num_type: NumberType,
 }
 impl Number {
     fn new(bits: u8, num_type: NumberType) -> Number {

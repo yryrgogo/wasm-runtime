@@ -2,8 +2,8 @@ mod decoder;
 mod module;
 mod util;
 use std::error::Error;
-use std::fs::File;
-use std::io::{BufReader, Read};
+// use std::fs::File;
+// use std::io::{BufReader, Read};
 
 use crate::decoder::Decoder;
 use crate::util::leb;
@@ -35,10 +35,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn show_binary_hex(path: &str) -> Result<(), Box<dyn Error>> {
-    let reader = BufReader::new(File::open(path)?);
-    for byte in reader.bytes() {
-        println!("{:x}", byte.unwrap());
-    }
-    Ok(())
-}
+// fn show_binary_hex(path: &str) -> Result<(), Box<dyn Error>> {
+//     let reader = BufReader::new(File::open(path)?);
+//     for (i, byte) in reader.bytes().enumerate() {
+//         println!("{:03}: {:x}", i, byte.unwrap());
+//     }
+//     Ok(())
+// }
