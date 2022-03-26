@@ -12,6 +12,8 @@ use std::{
     io::{BufReader, Read},
 };
 
+const UNSIGNED_LEB128_MAX_BITS: usize = 32;
+
 pub struct Decoder {
     reader: BufReader<File>,
 }
@@ -41,7 +43,7 @@ impl Decoder {
             match self.reader.read_exact(&mut byte_buf) {
                 Ok(()) => {
                     let section_id = byte_buf[0];
-                    let section_size = self.read_unsigned_leb128();
+                    let [section_size, _] = self.read_unsigned_leb128();
                     println!("Section ID: {} Size: {}", section_id, section_size);
 
                     match SectionId::from_usize(section_id).unwrap() {
@@ -57,13 +59,7 @@ impl Decoder {
                         SectionId::ExportSectionId => {
                             self.decode_export_section(&mut module).unwrap()
                         }
-                        SectionId::CodeSectionId => {
-                            println!("Code Section");
-                            match self.discard_section(section_size) {
-                                Ok(()) => println!("Discard section"),
-                                Err(err) => panic!("Failed to discard section {}", err),
-                            }
-                        }
+                        SectionId::CodeSectionId => self.decode_code_section(&mut module),
                     }
                 }
                 Err(_) => break,
@@ -84,7 +80,7 @@ impl Decoder {
     fn decode_type_section(&mut self, module: &mut Module) {
         println!("Decode Type Section");
 
-        let signature_count = self.read_unsigned_leb128();
+        let [signature_count, _] = self.read_unsigned_leb128();
         println!("Signature count: {}", signature_count);
 
         let mut byte_buf = [0; 1];
@@ -96,14 +92,14 @@ impl Decoder {
 
             let mut func_type = FunctionType::default();
 
-            let parameter_count = self.read_unsigned_leb128();
+            let [parameter_count, _] = self.read_unsigned_leb128();
             for p_i in 0..parameter_count {
                 let value = self.decode_type().unwrap();
                 println!("Parameter {} Type {:?}", p_i + 1, value);
                 func_type.parameters.push(value);
             }
 
-            let result_count = self.read_unsigned_leb128();
+            let [result_count, _] = self.read_unsigned_leb128();
 
             // NOTE: 202203時点の仕様では戻り値は1つまで
             assert_eq!(result_count, 1);
@@ -120,7 +116,7 @@ impl Decoder {
     fn decode_function_section(&mut self, module: &mut Module) {
         println!("Decode Function Section");
 
-        let function_count = self.read_unsigned_leb128();
+        let [function_count, _] = self.read_unsigned_leb128();
         println!("Function count: {}", function_count);
         for i in 0..function_count {
             self.read_unsigned_leb128();
@@ -132,10 +128,10 @@ impl Decoder {
     fn decode_export_section(&mut self, module: &mut Module) -> Result<(), Box<dyn Error>> {
         println!("Decode Export Section");
 
-        let export_count = self.read_unsigned_leb128();
+        let [export_count, _] = self.read_unsigned_leb128();
         println!("Export count: {}", export_count);
         for _ in 0..export_count {
-            let name_size = self.read_unsigned_leb128();
+            let [name_size, _] = self.read_unsigned_leb128();
             let mut name_buf = vec![0; name_size];
             self.reader.read_exact(&mut name_buf)?;
             let name = std::str::from_utf8(&name_buf).unwrap();
@@ -165,15 +161,56 @@ impl Decoder {
         Ok(())
     }
 
+    fn decode_code_section(&mut self, module: &mut Module) {
+        println!("Decode Code Section");
+
+        let [func_body_count, _] = self.read_unsigned_leb128();
+        println!("func_body Count: {}", func_body_count);
+
+        for func_idx in 0..func_body_count {
+            println!("# func_body {}", func_idx);
+
+            let [func_body_size, _] = self.read_unsigned_leb128();
+            println!("# func_body size: {}", func_body_size);
+
+            let mut local_var_byte_size: usize = 0;
+            let [local_var_count, local_var_count_byte_size] = self.read_unsigned_leb128();
+            local_var_byte_size += local_var_count_byte_size;
+            println!("# Local Var Count: {}", local_var_count);
+
+            for _ in 0..local_var_count {
+                let [local_var_type_count, local_var_type_count_byte_size] =
+                    self.read_unsigned_leb128();
+                local_var_byte_size += local_var_type_count_byte_size;
+                let local_var_type = self.decode_type().unwrap();
+                local_var_byte_size += 1;
+                println!(
+                    "Local Var Type: {} Count: {:x}",
+                    local_var_type.inspect(),
+                    local_var_type_count
+                );
+
+                module.functions[func_idx].local_vars = vec![local_var_type; local_var_type_count];
+            }
+            let mut expression_buf: Vec<u8> = vec![0; func_body_size - local_var_byte_size];
+            self.reader.read_exact(&mut expression_buf).unwrap();
+            module.functions[func_idx].expressions = expression_buf;
+
+            println!("{}", module.functions[func_idx].inspect());
+        }
+
+        println!("Rest binary");
+        for i in 0..10 {
+            let mut buf = [0; 1];
+            self.reader.read_exact(&mut buf).unwrap();
+            println!("{}: {}, {:x}, {:b}", i, buf[0], buf[0], buf[0]);
+        }
+    }
+
     fn decode_type(&mut self) -> Result<Number, Box<dyn Error>> {
         let mut buf = [0; 1];
         self.reader.read_exact(&mut buf)?;
-        Ok(match NumberType::from_byte(buf[0]).unwrap() {
-            NumberType::Int32 => Number::i32(),
-            NumberType::Int64 => Number::i64(),
-            NumberType::Float32 => Number::f32(),
-            NumberType::Float64 => Number::f64(),
-        })
+        NumberType::decode_type(buf[0])
     }
 
     fn discard_section(&mut self, size: usize) -> Result<(), Box<dyn Error>> {
@@ -185,28 +222,50 @@ impl Decoder {
         Ok(result)
     }
 
-    fn read_unsigned_leb128(&mut self) -> usize {
+    fn read_unsigned_leb128(&mut self) -> [usize; 2] {
         let mut value: usize = 0;
-        let mut shift: u32 = 0;
+        let mut shift: usize = 0;
         let mut buf: [u8; 1] = [0; 1];
-        let unsigned_leb128_max_bits = 32;
+        let mut byte_count: usize = 0;
 
         loop {
             match self.reader.read_exact(&mut buf) {
                 Ok(()) => {
                     value |= ((buf[0] & 0x7F) as usize) << shift;
                     shift += 7;
+                    byte_count += 1;
 
                     if ((buf[0] >> 7) & 1) != 1 {
                         break;
                     }
-                    if shift > unsigned_leb128_max_bits {
+                    if shift > UNSIGNED_LEB128_MAX_BITS {
                         panic!("Invalid LEB128 encoding");
                     }
                 }
                 Err(err) => panic!("Failed to read buffer {}", err),
             }
         }
-        value
+        [value, byte_count]
+    }
+
+    fn decode_unsigned_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
+        let mut value: usize = 0;
+        let mut shift: usize = 0;
+        let mut byte_count: usize = 0;
+
+        loop {
+            let byte = buf.pop().unwrap();
+            value |= ((byte & 0x7F) as usize) << shift;
+            shift += 7;
+
+            if ((byte >> 7) & 1) != 1 {
+                break;
+            }
+            byte_count += 1;
+            if shift > UNSIGNED_LEB128_MAX_BITS {
+                panic!("Invalid LEB128 encoding");
+            }
+        }
+        [value, byte_count]
     }
 }

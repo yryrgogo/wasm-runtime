@@ -24,7 +24,7 @@ impl FunctionType {
         let results = self
             .results
             .iter()
-            .map(|x| format!("{}", x.inspect()))
+            .map(|x| x.inspect())
             .collect::<Vec<String>>()
             .join(", ");
 

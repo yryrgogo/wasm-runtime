@@ -1,3 +1,5 @@
+use std::error::Error;
+
 #[derive(Debug, Clone, Copy)]
 pub enum NumberType {
     Int32,
@@ -12,8 +14,21 @@ impl NumberType {
             0x7E => Some(NumberType::Int64),
             0x7D => Some(NumberType::Float32),
             0x7C => Some(NumberType::Float64),
-            _ => panic!("Invalid ValueType {:x}", byte),
+            // _ => panic!("Invalid ValueType {:x}", byte),
+            _ => {
+                println!("Invalid ValueType {:x}", byte);
+                Some(NumberType::Int32)
+            }
         }
+    }
+
+    pub fn decode_type(byte: u8) -> Result<Number, Box<dyn Error>> {
+        Ok(match NumberType::from_byte(byte).unwrap() {
+            NumberType::Int32 => Number::i32(),
+            NumberType::Int64 => Number::i64(),
+            NumberType::Float32 => Number::f32(),
+            NumberType::Float64 => Number::f64(),
+        })
     }
 }
 
