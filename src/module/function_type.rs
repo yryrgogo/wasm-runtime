@@ -1,9 +1,9 @@
-use super::number::Number;
+use super::number::NumberType;
 
 #[derive(Debug, Clone)]
 pub struct FunctionType {
-    pub parameters: Vec<Number>,
-    pub results: Vec<Number>,
+    pub parameters: Vec<NumberType>,
+    pub results: Vec<NumberType>,
 }
 impl Default for FunctionType {
     fn default() -> FunctionType {

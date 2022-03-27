@@ -1,9 +1,9 @@
-use super::{function_type::FunctionType, number::Number};
+use super::{function_type::FunctionType, number::NumberType};
 
 #[derive(Debug, Clone)]
 pub struct Function {
     func_type: FunctionType,
-    pub local_vars: Vec<Number>,
+    pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
 }
 impl Function {
@@ -29,17 +29,24 @@ impl Function {
 }
 
 pub struct Block {
-    pub instructions: Vec<u8>,
+    pub instruction: u8,
     pub start_idx: usize,
     pub end_idx: usize,
 }
 
 impl Block {
-    pub fn new(instructions: Vec<u8>, start_idx: usize) -> Block {
+    pub fn new(instruction: u8, start_idx: usize) -> Block {
         Block {
-            instructions: instructions,
+            instruction: instruction,
             start_idx: start_idx,
             end_idx: 0,
         }
+    }
+
+    pub fn inspect(&self) -> String {
+        format!(
+            "#<Block instruction={}, start_idx={}, end_idx={}>",
+            self.instruction, self.start_idx, self.end_idx
+        )
     }
 }

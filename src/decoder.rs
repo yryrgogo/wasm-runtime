@@ -1,7 +1,7 @@
 use crate::module::{
     function::{Block, Function},
     function_type::FunctionType,
-    number::{Number, NumberType},
+    number::NumberType,
     opcode::OpCode,
     section::{ExportDesc, SectionId, TypeSection},
     Module,
@@ -96,9 +96,9 @@ impl Decoder {
 
             let [parameter_count, _] = self.read_unsigned_leb128();
             for p_i in 0..parameter_count {
-                let value = self.decode_type().unwrap();
-                println!("Parameter {} Type {:?}", p_i + 1, value);
-                func_type.parameters.push(value);
+                let num_type = self.decode_type().unwrap();
+                println!("Parameter {} Type {:?}", p_i + 1, num_type);
+                func_type.parameters.push(num_type);
             }
 
             let [result_count, _] = self.read_unsigned_leb128();
@@ -203,7 +203,7 @@ impl Decoder {
             let mut expressions = module.functions[func_idx].expressions.clone();
             let mut blocks: HashMap<usize, Block> = HashMap::new();
 
-            let mut block_stack = vec![Block::new(expressions.clone(), 0)];
+            let mut block_stack = vec![Block::new(2, 0)];
 
             expressions.reverse();
             loop {
@@ -212,20 +212,16 @@ impl Decoder {
                 }
                 match self.read_next_structured_instruction(&mut expressions) {
                     Some(structured_instruction) => {
-                        let idx = func_body_size - expressions.len() - 2;
+                        let idx = module.functions[func_idx].expressions.len() - expressions.len();
+                        println!("idx:{}", idx);
                         match OpCode::from_byte(structured_instruction) {
                             OpCode::End => {
                                 let mut block = block_stack.pop().unwrap();
                                 block.end_idx = idx;
-                                block.instructions = module.functions[func_idx].expressions
-                                    [block.start_idx..block.end_idx]
-                                    .to_vec();
                                 blocks.insert(block.start_idx, block);
                             }
                             _ => {
-                                println!("SI byte: {:x} idx: {}", structured_instruction, idx);
-
-                                let block = Block::new(vec![], idx);
+                                let block = Block::new(structured_instruction, idx);
                                 block_stack.push(block);
                             }
                         };
@@ -233,28 +229,21 @@ impl Decoder {
                     None => {}
                 };
             }
+
+            for (_, block) in blocks {
+                println!("{}", block.inspect());
+            }
         }
 
-        // println!("Expression");
-        // for i in 0..module.functions[0].expressions.len() {
-        //     println!(
-        //         "{}: {}, {:x}, {:b}",
-        //         i,
-        //         module.functions[0].expressions[i],
-        //         module.functions[0].expressions[i],
-        //         module.functions[0].expressions[i]
-        //     );
-        // }
-
         println!("Rest binary");
-        for i in 0..100 {
+        for i in 0..40 {
             let mut buf = [0; 1];
             self.reader.read_exact(&mut buf).unwrap();
-            println!("{}: {}, {:x}, {:b}", i, buf[0], buf[0], buf[0]);
+            println!("{:03}: {:x}", i, buf[0]);
         }
     }
 
-    fn decode_type(&mut self) -> Result<Number, Box<dyn Error>> {
+    fn decode_type(&mut self) -> Result<NumberType, Box<dyn Error>> {
         let mut buf = [0; 1];
         self.reader.read_exact(&mut buf)?;
         NumberType::decode_type(buf[0])

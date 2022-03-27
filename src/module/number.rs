@@ -22,43 +22,63 @@ impl NumberType {
         }
     }
 
-    pub fn decode_type(byte: u8) -> Result<Number, Box<dyn Error>> {
+    pub fn decode_type(byte: u8) -> Result<NumberType, Box<dyn Error>> {
         Ok(match NumberType::from_byte(byte).unwrap() {
-            NumberType::Int32 => Number::i32(),
-            NumberType::Int64 => Number::i64(),
-            NumberType::Float32 => Number::f32(),
-            NumberType::Float64 => Number::f64(),
+            NumberType::Int32 => NumberType::Int32,
+            NumberType::Int64 => NumberType::Int64,
+            NumberType::Float32 => NumberType::Float32,
+            NumberType::Float64 => NumberType::Float64,
         })
+    }
+
+    pub fn inspect(&self) -> String {
+        format!("{:?}", self)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(PartialEq)]
+pub enum Value {
+    Int32(i32),
+    Int64(i64),
+    Float32(f32),
+    Float64(f64),
+}
 pub struct Number {
     bits: u8,
     pub num_type: NumberType,
+    pub value: Value,
 }
 impl Number {
-    fn new(bits: u8, num_type: NumberType) -> Number {
+    fn new(bits: u8, num_type: NumberType, value: Value) -> Number {
         Number {
             bits: bits,
             num_type: num_type,
+            value: value,
         }
     }
 
-    pub fn i32() -> Number {
-        Number::new(32, NumberType::Int32)
+    pub fn i32(value: Option<Value>) -> Number {
+        Number::new(32, NumberType::Int32, value.unwrap_or(Value::Int32(0)))
     }
 
-    pub fn i64() -> Number {
-        Number::new(64, NumberType::Int64)
+    pub fn i64(value: Option<Value>) -> Number {
+        Number::new(64, NumberType::Int64, value.unwrap_or(Value::Int64(0)))
     }
 
-    pub fn f32() -> Number {
-        Number::new(32, NumberType::Float32)
+    pub fn f32(value: Option<Value>) -> Number {
+        Number::new(
+            32,
+            NumberType::Float32,
+            value.unwrap_or(Value::Float32(0.0)),
+        )
     }
 
-    pub fn f64() -> Number {
-        Number::new(64, NumberType::Float64)
+    pub fn f64(value: Option<Value>) -> Number {
+        Number::new(
+            64,
+            NumberType::Float64,
+            value.unwrap_or(Value::Float64(0.0)),
+        )
     }
 
     pub fn inspect(&self) -> String {
