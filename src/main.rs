@@ -1,5 +1,6 @@
 mod decoder;
 mod module;
+mod structure;
 mod util;
 use std::error::Error;
 // use std::fs::File;
