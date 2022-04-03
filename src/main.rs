@@ -9,6 +9,9 @@ use std::error::Error;
 // use std::fs::File;
 // use std::io::{BufReader, Read};
 
+use evaluator::Evaluator;
+use module::value::Value;
+
 use crate::decoder::Decoder;
 use crate::util::leb;
 
@@ -35,6 +38,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut decoder = Decoder::new(path).unwrap();
     decoder.validate_header();
     decoder.decode_section().unwrap();
+
+    // println!("Rest binary");
+    // for i in 0..40 {
+    //     let mut buf = [0; 1];
+    //     decoder.reader.read_exact(&mut buf).unwrap();
+    //     println!("{:03}: {:x}", i, buf[0]);
+    // }
+
+    let mut eval = Evaluator::new(decoder.module);
+    eval.invoke("fib".to_string(), vec![Value::Int32(10)]);
 
     Ok(())
 }

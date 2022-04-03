@@ -18,7 +18,7 @@ const UNSIGNED_LEB128_MAX_BITS: usize = 32;
 
 pub struct Decoder {
     reader: BufReader<File>,
-    module: Module,
+    pub module: Module,
 }
 
 impl Decoder {
@@ -125,7 +125,9 @@ impl Decoder {
         for i in 0..function_count {
             self.read_unsigned_leb128();
             let func_type = self.module.function_types[i].clone();
-            self.module.functions.push(Function::new(func_type))
+            self.module
+                .functions
+                .push(Function::new(func_type, Some(self.module.functions.len())))
         }
     }
 
@@ -173,13 +175,6 @@ impl Decoder {
 
         for func_idx in 0..func_body_count {
             self.decode_code_section_body(func_idx)
-        }
-
-        println!("Rest binary");
-        for i in 0..40 {
-            let mut buf = [0; 1];
-            self.reader.read_exact(&mut buf).unwrap();
-            println!("{:03}: {:x}", i, buf[0]);
         }
     }
 

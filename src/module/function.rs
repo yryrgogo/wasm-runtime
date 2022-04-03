@@ -8,21 +8,23 @@ pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
+    pub index: Option<usize>,
 }
 
 impl Default for Function {
     fn default() -> Function {
         let func_type = FunctionType::default();
-        Function::new(func_type)
+        Function::new(func_type, None)
     }
 }
 
 impl Function {
-    pub fn new(func_type: FunctionType) -> Function {
+    pub fn new(func_type: FunctionType, index: Option<usize>) -> Function {
         Function {
             func_type: func_type,
             local_vars: vec![],
             expressions: vec![],
+            index: index,
         }
     }
     pub fn create_local_variables(&self) -> Vec<Number> {

@@ -64,13 +64,7 @@ impl Evaluator {
 
     pub fn invoke(&mut self, func_name: String, args: Vec<Value>) {
         self.stack.push_values(args);
-
-        let func_idx = self
-            .module
-            .functions
-            .iter()
-            .position(|f| f == self.module.exported.get(&func_name).unwrap())
-            .unwrap();
+        let func_idx = self.module.exported.get(&func_name).unwrap().index.unwrap();
 
         self.call(func_idx);
 
