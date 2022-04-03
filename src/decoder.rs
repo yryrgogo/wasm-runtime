@@ -203,7 +203,7 @@ impl Decoder {
             let mut expressions = module.functions[func_idx].expressions.clone();
             let mut blocks: HashMap<usize, Block> = HashMap::new();
 
-            let mut block_stack = vec![Block::new(2, 0)];
+            let mut block_stack = vec![Block::new(2, 0, None)];
 
             expressions.reverse();
             loop {
@@ -221,7 +221,7 @@ impl Decoder {
                                 blocks.insert(block.start_idx, block);
                             }
                             _ => {
-                                let block = Block::new(structured_instruction, idx);
+                                let block = Block::new(structured_instruction, idx, None);
                                 block_stack.push(block);
                             }
                         };

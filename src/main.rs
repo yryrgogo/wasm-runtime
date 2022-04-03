@@ -1,5 +1,8 @@
 mod decoder;
+mod evaluator;
+mod instructions;
 mod module;
+mod stack;
 mod structure;
 mod util;
 use std::error::Error;

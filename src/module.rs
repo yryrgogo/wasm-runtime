@@ -1,5 +1,8 @@
+use crate::stack::Stack;
+
 use self::function::Function;
 use self::function_type::FunctionType;
+use self::number::Number;
 use std::collections::HashMap;
 
 pub mod function;
@@ -7,6 +10,7 @@ pub mod function_type;
 pub mod number;
 pub mod opcode;
 pub mod section;
+pub mod value;
 
 pub struct Module {
     magic_bytes: String,
@@ -43,5 +47,9 @@ impl Module {
 
     pub fn valid_header(&self, header_string: &String) -> bool {
         header_string == &(self.header(Some(self.version)))
+    }
+
+    pub fn invoke(func_name: String, args: Vec<Number>) {
+        Stack::new();
     }
 }
