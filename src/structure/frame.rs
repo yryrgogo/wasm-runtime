@@ -1,13 +1,24 @@
-use crate::module::number::Number;
+use crate::module::{function::Function, number::Number};
 
-struct Frame {
+#[derive(Debug)]
+pub struct Frame {
+    pub function: Function,
     local_vars: Vec<Number>,
 }
 
+impl Default for Frame {
+    fn default() -> Frame {
+        Frame::new(Function::default(), vec![])
+    }
+}
+
 impl Frame {
-    pub fn new(local_vars: Vec<Number>) -> Frame {
+    pub fn new(function: Function, mut local_vars: Vec<Number>) -> Frame {
+        let mut args = function.create_local_variables();
+        args.append(&mut local_vars);
         Frame {
-            local_vars: local_vars,
+            local_vars: args,
+            function,
         }
     }
 

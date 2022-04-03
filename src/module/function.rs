@@ -1,4 +1,7 @@
-use super::{function_type::FunctionType, number::NumberType};
+use super::{
+    function_type::FunctionType,
+    number::{Number, NumberType},
+};
 
 #[derive(Debug, Clone)]
 pub struct Function {
@@ -6,6 +9,14 @@ pub struct Function {
     pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
 }
+
+impl Default for Function {
+    fn default() -> Function {
+        let func_type = FunctionType::default();
+        Function::new(func_type)
+    }
+}
+
 impl Function {
     pub fn new(func_type: FunctionType) -> Function {
         Function {
@@ -13,6 +24,17 @@ impl Function {
             local_vars: vec![],
             expressions: vec![],
         }
+    }
+    pub fn create_local_variables(&self) -> Vec<Number> {
+        self.local_vars
+            .iter()
+            .map(|x| match x {
+                NumberType::Int32 => Number::i32(Some(0)),
+                NumberType::Int64 => Number::i64(Some(0)),
+                NumberType::Float32 => Number::f32(Some(0.0)),
+                NumberType::Float64 => Number::f64(Some(0.0)),
+            })
+            .collect::<Vec<Number>>()
     }
     pub fn inspect(&self) -> String {
         format!(
@@ -35,11 +57,12 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(instruction: u8, start_idx: usize) -> Block {
+    pub fn new(instruction: u8, start_idx: usize, end_idx: Option<usize>) -> Block {
+        let end = end_idx.unwrap_or(start_idx);
         Block {
             instruction: instruction,
             start_idx: start_idx,
-            end_idx: 0,
+            end_idx: end,
         }
     }
 
