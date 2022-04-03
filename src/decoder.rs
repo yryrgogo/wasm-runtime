@@ -170,69 +170,7 @@ impl Decoder {
         println!("func_body Count: {}", func_body_count);
 
         for func_idx in 0..func_body_count {
-            println!("# func_body {}", func_idx);
-
-            let [func_body_size, _] = self.read_unsigned_leb128();
-            println!("# func_body size: {}", func_body_size);
-
-            let mut local_var_byte_size: usize = 0;
-            let [local_var_count, local_var_count_byte_size] = self.read_unsigned_leb128();
-            local_var_byte_size += local_var_count_byte_size;
-            println!("# Local Var Count: {}", local_var_count);
-
-            for _ in 0..local_var_count {
-                let [local_var_type_count, local_var_type_count_byte_size] =
-                    self.read_unsigned_leb128();
-                local_var_byte_size += local_var_type_count_byte_size;
-                let local_var_type = self.decode_type().unwrap();
-                local_var_byte_size += 1;
-                println!(
-                    "Local Var Type: {} Count: {:x}",
-                    local_var_type.inspect(),
-                    local_var_type_count
-                );
-
-                module.functions[func_idx].local_vars = vec![local_var_type; local_var_type_count];
-            }
-            let mut expression_buf: Vec<u8> = vec![0; func_body_size - local_var_byte_size];
-            self.reader.read_exact(&mut expression_buf).unwrap();
-            module.functions[func_idx].expressions = expression_buf;
-
-            println!("{}", module.functions[func_idx].inspect());
-
-            let mut expressions = module.functions[func_idx].expressions.clone();
-            let mut blocks: HashMap<usize, Block> = HashMap::new();
-
-            let mut block_stack = vec![Block::new(2, 0, None)];
-
-            expressions.reverse();
-            loop {
-                if expressions.len() == 0 {
-                    break;
-                }
-                match self.read_next_structured_instruction(&mut expressions) {
-                    Some(structured_instruction) => {
-                        let idx = module.functions[func_idx].expressions.len() - expressions.len();
-                        println!("idx:{}", idx);
-                        match OpCode::from_byte(structured_instruction) {
-                            OpCode::End => {
-                                let mut block = block_stack.pop().unwrap();
-                                block.end_idx = idx;
-                                blocks.insert(block.start_idx, block);
-                            }
-                            _ => {
-                                let block = Block::new(structured_instruction, idx, None);
-                                block_stack.push(block);
-                            }
-                        };
-                    }
-                    None => {}
-                };
-            }
-
-            for (_, block) in blocks {
-                println!("{}", block.inspect());
-            }
+            self.decode_code_section_body(module, func_idx)
         }
 
         println!("Rest binary");
@@ -240,6 +178,85 @@ impl Decoder {
             let mut buf = [0; 1];
             self.reader.read_exact(&mut buf).unwrap();
             println!("{:03}: {:x}", i, buf[0]);
+        }
+    }
+
+    fn decode_code_section_body(&mut self, module: &mut Module, func_idx: usize) {
+        println!("# func_body {}", func_idx);
+
+        let [func_body_size, _] = self.read_unsigned_leb128();
+        println!("# func_body size: {}", func_body_size);
+
+        let mut local_var_byte_size: usize = 0;
+        let [local_var_count, local_var_count_byte_size] = self.read_unsigned_leb128();
+        local_var_byte_size += local_var_count_byte_size;
+        println!("# Local Var Count: {}", local_var_count);
+
+        for _ in 0..local_var_count {
+            let local_var_type_count_byte_size =
+                self.decode_code_section_body_local_var(module, func_idx);
+            local_var_byte_size += local_var_type_count_byte_size;
+            local_var_byte_size += 1;
+        }
+        let mut expression_buf: Vec<u8> = vec![0; func_body_size - local_var_byte_size];
+        self.reader.read_exact(&mut expression_buf).unwrap();
+        module.functions[func_idx].expressions = expression_buf;
+
+        println!("{}", module.functions[func_idx].inspect());
+
+        self.decode_code_section_body_block(module, func_idx);
+    }
+
+    fn decode_code_section_body_local_var(
+        &mut self,
+        module: &mut Module,
+        func_idx: usize,
+    ) -> usize {
+        let [local_var_type_count, local_var_type_count_byte_size] = self.read_unsigned_leb128();
+        let local_var_type = self.decode_type().unwrap();
+        println!(
+            "Local Var Type: {} Count: {:x}",
+            local_var_type.inspect(),
+            local_var_type_count
+        );
+
+        module.functions[func_idx].local_vars = vec![local_var_type; local_var_type_count];
+        local_var_type_count_byte_size
+    }
+
+    fn decode_code_section_body_block(&mut self, module: &mut Module, func_idx: usize) {
+        let mut expressions = module.functions[func_idx].expressions.clone();
+        let mut blocks: HashMap<usize, Block> = HashMap::new();
+
+        let mut block_stack = vec![Block::new(2, 0, None)];
+
+        expressions.reverse();
+        loop {
+            if expressions.len() == 0 {
+                break;
+            }
+            match self.read_next_structured_instruction(&mut expressions) {
+                Some(structured_instruction) => {
+                    let idx = module.functions[func_idx].expressions.len() - expressions.len();
+                    println!("idx:{}", idx);
+                    match OpCode::from_byte(structured_instruction) {
+                        OpCode::End => {
+                            let mut block = block_stack.pop().unwrap();
+                            block.end_idx = idx;
+                            blocks.insert(block.start_idx, block);
+                        }
+                        _ => {
+                            let block = Block::new(structured_instruction, idx, None);
+                            block_stack.push(block);
+                        }
+                    };
+                }
+                None => {}
+            };
+        }
+
+        for (_, block) in blocks {
+            println!("{}", block.inspect());
         }
     }
 
