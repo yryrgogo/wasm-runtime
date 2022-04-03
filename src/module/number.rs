@@ -2,7 +2,7 @@ use std::error::Error;
 
 use super::value::Value;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberType {
     Int32,
     Int64,

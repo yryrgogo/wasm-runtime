@@ -5,7 +5,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct Function {
-    func_type: FunctionType,
+    pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
 }
