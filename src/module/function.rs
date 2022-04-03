@@ -3,7 +3,7 @@ use super::{
     number::{Number, NumberType},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,

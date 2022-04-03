@@ -4,7 +4,7 @@ use crate::structure::frame::Frame;
 
 pub struct Stack {
     stack: Vec<Instructions>,
-    frame_positions: Vec<usize>,
+    pub frame_positions: Vec<usize>,
 }
 
 impl Stack {
@@ -15,8 +15,10 @@ impl Stack {
         }
     }
 
-    pub fn push_values(&mut self, mut values: Vec<Instructions>) {
-        self.stack.append(&mut values);
+    pub fn push_values(&mut self, values: Vec<Value>) {
+        for value in values {
+            self.stack.push(Instructions::Value(value));
+        }
     }
 
     pub fn push_frame(&mut self, frame: Frame) {

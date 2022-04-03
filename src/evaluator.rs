@@ -9,6 +9,13 @@ pub struct Evaluator {
 }
 
 impl Evaluator {
+    pub fn new(module: Module) -> Evaluator {
+        Evaluator {
+            stack: Stack::new(),
+            module: module,
+        }
+    }
+
     fn call(&mut self, func_idx: usize) {
         let func = self.module.functions.get(func_idx).unwrap().clone();
         let mut args: Vec<Number> = vec![];
@@ -49,5 +56,31 @@ impl Evaluator {
         }
 
         self.stack.push_frame(Frame::new(func, args))
+    }
+
+    fn execute(&self) {
+        todo!("")
+    }
+
+    pub fn invoke(&mut self, func_name: String, args: Vec<Value>) {
+        self.stack.push_values(args);
+
+        let func_idx = self
+            .module
+            .functions
+            .iter()
+            .position(|f| f == self.module.exported.get(&func_name).unwrap())
+            .unwrap();
+
+        self.call(func_idx);
+
+        loop {
+            match self.stack.frame_positions.last() {
+                Some(_) => {
+                    self.execute();
+                }
+                None => break,
+            }
+        }
     }
 }

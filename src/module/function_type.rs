@@ -1,6 +1,6 @@
 use super::number::NumberType;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionType {
     pub parameters: Vec<NumberType>,
     pub results: Vec<NumberType>,
