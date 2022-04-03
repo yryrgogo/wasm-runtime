@@ -8,7 +8,6 @@ pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
-    pub index: Option<usize>,
 }
 
 impl Default for Function {
@@ -24,7 +23,6 @@ impl Function {
             func_type: func_type,
             local_vars: vec![],
             expressions: vec![],
-            index: index,
         }
     }
     pub fn create_local_variables(&self) -> Vec<Number> {

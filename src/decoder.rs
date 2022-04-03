@@ -1,12 +1,15 @@
-use crate::module::{
-    function::{Block, Function},
-    function_type::FunctionType,
-    number::NumberType,
-    opcode::OpCode,
-    section::{ExportDesc, SectionId, TypeSection},
-    Module,
-};
 use crate::util::byte::byte2string;
+use crate::{
+    export::ExportMap,
+    module::{
+        function::{Block, Function},
+        function_type::FunctionType,
+        number::NumberType,
+        opcode::OpCode,
+        section::{ExportDesc, SectionId, TypeSection},
+        Module,
+    },
+};
 use std::{
     collections::HashMap,
     error::Error,
@@ -74,7 +77,7 @@ impl Decoder {
             println!(
                 "{}: {}",
                 key,
-                self.module.exported.get(key).unwrap().inspect()
+                self.module.exported.get(key).unwrap().function.inspect()
             );
         }
 
@@ -153,9 +156,13 @@ impl Decoder {
                     if self.module.exported.contains_key(name) {
                         panic!("{} key already exists", name);
                     }
+                    let func_idx = usize::from(index_buf[0]);
                     self.module.exported.insert(
                         name.to_string(),
-                        self.module.functions[usize::from(index_buf[0])].clone(),
+                        ExportMap {
+                            index: func_idx,
+                            function: self.module.functions[func_idx].clone(),
+                        },
                     );
                 }
                 ExportDesc::Table => todo!(),

@@ -1,5 +1,6 @@
 mod decoder;
 mod evaluator;
+mod export;
 mod instructions;
 mod module;
 mod stack;

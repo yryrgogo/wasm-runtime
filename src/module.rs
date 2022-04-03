@@ -1,9 +1,7 @@
-use crate::evaluator::Evaluator;
-use crate::stack::Stack;
+use crate::export::ExportMap;
 
 use self::function::Function;
 use self::function_type::FunctionType;
-use self::value::Value;
 use std::collections::HashMap;
 
 pub mod function;
@@ -18,7 +16,7 @@ pub struct Module {
     version: u8,
     pub functions: Vec<Function>,
     pub function_types: Vec<FunctionType>,
-    pub exported: HashMap<String, Function>,
+    pub exported: HashMap<String, ExportMap>,
 }
 
 impl Default for Module {
