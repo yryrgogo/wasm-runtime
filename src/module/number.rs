@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use super::value::Value;
+
 #[derive(Debug, Clone, Copy)]
 pub enum NumberType {
     Int32,
@@ -36,13 +38,7 @@ impl NumberType {
     }
 }
 
-#[derive(PartialEq)]
-pub enum Value {
-    Int32(i32),
-    Int64(i64),
-    Float32(f32),
-    Float64(f64),
-}
+#[derive(Debug)]
 pub struct Number {
     bits: u8,
     pub num_type: NumberType,
@@ -57,28 +53,24 @@ impl Number {
         }
     }
 
-    pub fn i32(value: Option<Value>) -> Number {
-        Number::new(32, NumberType::Int32, value.unwrap_or(Value::Int32(0)))
+    pub fn i32(value: Option<i32>) -> Number {
+        let v = value.unwrap_or(0);
+        Number::new(32, NumberType::Int32, Value::Int32(v))
     }
 
-    pub fn i64(value: Option<Value>) -> Number {
-        Number::new(64, NumberType::Int64, value.unwrap_or(Value::Int64(0)))
+    pub fn i64(value: Option<i64>) -> Number {
+        let v = value.unwrap_or(0);
+        Number::new(64, NumberType::Int64, Value::Int64(v))
     }
 
-    pub fn f32(value: Option<Value>) -> Number {
-        Number::new(
-            32,
-            NumberType::Float32,
-            value.unwrap_or(Value::Float32(0.0)),
-        )
+    pub fn f32(value: Option<f32>) -> Number {
+        let v = value.unwrap_or(0.0);
+        Number::new(32, NumberType::Float32, Value::Float32(v))
     }
 
-    pub fn f64(value: Option<Value>) -> Number {
-        Number::new(
-            64,
-            NumberType::Float64,
-            value.unwrap_or(Value::Float64(0.0)),
-        )
+    pub fn f64(value: Option<f64>) -> Number {
+        let v = value.unwrap_or(0.0);
+        Number::new(64, NumberType::Float64, Value::Float64(v))
     }
 
     pub fn inspect(&self) -> String {

@@ -1,6 +1,6 @@
 # wasm-interpreter
 
-[WIP] WebAssembly Interpreter を Rust で自作する。
+[WIP] WebAssembly Interpreter を Rust で書く。
 
 ## Reference
 
