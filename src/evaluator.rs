@@ -30,27 +30,43 @@ impl Evaluator {
             match value {
                 Value::Int32(v) => {
                     if *arg_type == NumberType::Int32 {
-                        args.push(Number::i32(Some(v)))
+                        args.push(Number::i32(Some(v)));
+                        continue;
                     }
-                    panic!("invalid popped value: {:?} {:?}", value, arg_type)
+                    panic!(
+                        "invalid popped value. Int32 is expected. {:?} {:?}",
+                        value, arg_type
+                    )
                 }
                 Value::Int64(v) => {
                     if *arg_type == NumberType::Int64 {
-                        args.push(Number::i64(Some(v)))
+                        args.push(Number::i64(Some(v)));
+                        continue;
                     }
-                    panic!("invalid popped value: {:?} {:?}", value, arg_type)
+                    panic!(
+                        "invalid popped value. Int64 is expected. {:?} {:?}",
+                        value, arg_type
+                    )
                 }
                 Value::Float32(v) => {
                     if *arg_type == NumberType::Float32 {
-                        args.push(Number::f32(Some(v)))
+                        args.push(Number::f32(Some(v)));
+                        continue;
                     }
-                    panic!("invalid popped value: {:?} {:?}", value, arg_type)
+                    panic!(
+                        "invalid popped value. Float32 is expected. {:?} {:?}",
+                        value, arg_type
+                    )
                 }
                 Value::Float64(v) => {
                     if *arg_type == NumberType::Float64 {
-                        args.push(Number::f64(Some(v)))
+                        args.push(Number::f64(Some(v)));
+                        continue;
                     }
-                    panic!("invalid popped value: {:?} {:?}", value, arg_type)
+                    panic!(
+                        "invalid popped value. Float64 is expected. {:?} {:?}",
+                        value, arg_type
+                    )
                 }
             };
         }
@@ -58,8 +74,8 @@ impl Evaluator {
         self.stack.push_frame(Frame::new(func, args))
     }
 
-    fn execute(&self) {
-        todo!("")
+    fn execute(&self, opcode: &u8) {
+        todo!("{:b} {:x}", opcode, opcode)
     }
 
     pub fn invoke(&mut self, func_name: String, args: Vec<Value>) {
@@ -68,10 +84,16 @@ impl Evaluator {
 
         self.call(func_idx);
 
+        println!("{:?}", self.stack.frame_positions);
+
         loop {
+            let mut counter: usize = 0;
             match self.stack.frame_positions.last() {
                 Some(_) => {
-                    self.execute();
+                    let expression = self.stack.current_expression();
+                    let opcode = expression.get(counter).unwrap();
+                    self.execute(opcode);
+                    counter += 1;
                 }
                 None => break,
             }

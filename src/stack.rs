@@ -23,6 +23,7 @@ impl Stack {
 
     pub fn push_frame(&mut self, frame: Frame) {
         self.stack.push(Instructions::Frame(frame));
+        self.frame_positions.push(self.stack.len() - 1);
     }
 
     pub fn pop_value(&mut self) -> Value {
@@ -42,8 +43,8 @@ impl Stack {
         }
     }
 
-    pub fn current_expression(&self) -> Vec<u8> {
+    pub fn current_expression(&self) -> &Vec<u8> {
         let frame = self.current_frame();
-        frame.function.expressions.clone()
+        &frame.function.expressions
     }
 }
