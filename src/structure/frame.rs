@@ -14,10 +14,9 @@ impl Default for Frame {
 
 impl Frame {
     pub fn new(function: Function, mut local_vars: Vec<Number>) -> Frame {
-        let mut args = function.create_local_variables();
-        args.append(&mut local_vars);
+        local_vars.append(&mut function.create_local_variables());
         Frame {
-            local_vars: args,
+            local_vars: local_vars,
             function,
         }
     }

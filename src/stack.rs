@@ -2,8 +2,9 @@ use crate::instructions::Instructions;
 use crate::module::number::Number;
 use crate::structure::frame::Frame;
 
+#[derive(Debug)]
 pub struct Stack {
-    stack: Vec<Instructions>,
+    pub stack: Vec<Instructions>,
     pub frame_positions: Vec<usize>,
 }
 

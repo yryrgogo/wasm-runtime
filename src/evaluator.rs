@@ -20,12 +20,7 @@ impl Evaluator {
         let func = self.module.functions.get(func_idx).unwrap().clone();
         let mut args: Vec<Number> = vec![];
 
-        for (i, _) in func.func_type.parameters.iter().enumerate() {
-            let arg_type = func
-                .func_type
-                .parameters
-                .get(func.func_type.parameters.len() - i - 1)
-                .unwrap();
+        for (_, _) in func.func_type.parameters.iter().enumerate() {
             let value = self.stack.pop_value();
             match value.num_type {
                 NumberType::Int32 => {
@@ -42,7 +37,7 @@ impl Evaluator {
                 }
             };
         }
-
+        args.reverse();
         self.stack.push_frame(Frame::new(func, args))
     }
 
@@ -52,6 +47,7 @@ impl Evaluator {
             0x21 => self.execute_local_set(expression, counter),
             0x22 => self.execute_local_tee(expression, counter),
             _ => {
+                println!("{:?}", self.stack.stack);
                 todo!("{:x} {:b} {}", opcode, opcode, opcode)
             }
         }
@@ -104,6 +100,7 @@ impl Evaluator {
                 Some(_) => {
                     let expression = self.stack.current_expression();
                     let opcode = expression.get(counter).unwrap();
+
                     counter += 1;
                     counter = self.execute(opcode, &expression, counter);
                 }
