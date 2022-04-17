@@ -33,13 +33,15 @@ pub fn get_unsigned_leb128(value: u64) -> [u8; 8] {
     buf
 }
 
-pub fn read_signed_leb128(signed_leb128_vec: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
-    let mut value: i32 = 0;
+pub fn read_signed_leb128(bytes: &Vec<u8>) -> Result<(isize, usize), Box<dyn std::error::Error>> {
+    let mut value: isize = 0;
     let mut shift: usize = 0;
+    let mut size: usize = 0;
 
-    for byte in signed_leb128_vec {
-        value |= i32::from(byte & 0x7F) << shift;
+    for byte in bytes {
+        value |= isize::from(byte & 0x7F) << shift;
         shift += 7;
+        size += 1;
 
         if (byte >> 7) & 1 != 1 {
             break;
@@ -53,7 +55,7 @@ pub fn read_signed_leb128(signed_leb128_vec: Vec<u8>) -> Result<(), Box<dyn std:
     }
     println!("{}", value);
 
-    Ok(())
+    Ok((value, size))
 }
 
 pub fn get_signed_leb128(value: i64) -> [u8; 8] {
