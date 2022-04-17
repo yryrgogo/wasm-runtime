@@ -1,5 +1,6 @@
 use crate::module::number::{Number, NumberType};
 use crate::structure::frame::Frame;
+use crate::util::leb::read_signed_leb128;
 use crate::util::leb::read_unsigned_leb128;
 use crate::{module::Module, stack::Stack};
 
@@ -41,50 +42,63 @@ impl Evaluator {
         self.stack.push_frame(Frame::new(func, args))
     }
 
-    fn execute(&mut self, opcode: &u8, expression: &Vec<u8>, mut counter: usize) -> usize {
+    fn read_u_leb128(&mut self) -> usize {
+        match read_unsigned_leb128(&self.stack.current_expression()) {
+            Ok((value, size)) => {
+                self.stack.current_frame().increment_counter(size);
+                value
+            }
+            Err(_) => panic!("unsigned leb128 の decode に失敗しました。"),
+        }
+    }
+
+    fn read_s_leb128(&mut self) -> isize {
+        match read_signed_leb128(&self.stack.current_expression()) {
+            Ok((value, size)) => {
+                self.stack.current_frame().increment_counter(size);
+                value
+            }
+            Err(_) => panic!("signed leb128 の decode に失敗しました。"),
+        }
+    }
+
+    fn execute(&mut self) {
+        let opcode = self.stack.next_opcode();
         match opcode {
-            0x20 => self.execute_local_get(expression, counter),
-            0x21 => self.execute_local_set(expression, counter),
-            0x22 => self.execute_local_tee(expression, counter),
+            0x20 => self.execute_local_get(),
+            0x21 => self.execute_local_set(),
+            0x22 => self.execute_local_tee(),
+            0x41 => self.execute_i32_const(),
             _ => {
                 println!("{:?}", self.stack.stack);
-                todo!("{:x} {:b} {}", opcode, opcode, opcode)
+                todo!("{:x}", opcode);
             }
         }
     }
 
-    fn execute_local_get(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
-        let local_idx = expression.get(counter).unwrap();
-        counter += 1;
+    fn execute_local_get(&mut self) {
+        let local_idx = self.read_u_leb128();
         let local_var = self
             .stack
             .current_frame()
-            .reference_local_var(*local_idx as usize);
-
+            .reference_local_var(local_idx as usize);
         self.stack.push_values(vec![local_var]);
-        counter
     }
 
-    fn execute_local_set(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
-        match read_unsigned_leb128(expression) {
-            Ok((local_idx, size)) => {
-                counter += size;
-                self.stack.current_frame().local_vars[local_idx as usize] = self.stack.pop_value();
-                counter
-            }
-            Err(err) => panic!("Unsigned LEB128 の読み込みに失敗しました。 {}", err),
-        }
+    fn execute_local_set(&mut self) {
+        let local_idx = self.read_u_leb128();
+        self.stack.current_frame().local_vars[local_idx] = self.stack.pop_value();
     }
 
-    fn execute_local_tee(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
-        match read_unsigned_leb128(expression) {
-            Ok((local_idx, size)) => {
-                counter += size;
-                self.stack.current_frame().local_vars[local_idx as usize] = self.stack.peek();
-                counter
-            }
-            Err(err) => panic!("Unsigned LEB128 の読み込みに失敗しました。 {}", err),
-        }
+    fn execute_local_tee(&mut self) {
+        let local_idx = self.read_u_leb128();
+        self.stack.current_frame().local_vars[local_idx] = self.stack.peek();
+    }
+
+    fn execute_i32_const(&mut self) {
+        let value = self.read_s_leb128();
+        self.stack
+            .push_values(vec![Number::i32(Some(value as i32))]);
     }
 
     pub fn invoke(&mut self, func_name: String, args: Vec<Number>) {
@@ -93,16 +107,10 @@ impl Evaluator {
 
         self.call(func_idx);
 
-        let mut counter: usize = 0;
-
         loop {
             match self.stack.frame_positions.last() {
                 Some(_) => {
-                    let expression = self.stack.current_expression();
-                    let opcode = expression.get(counter).unwrap();
-
-                    counter += 1;
-                    counter = self.execute(opcode, &expression, counter);
+                    self.execute();
                 }
                 None => break,
             }

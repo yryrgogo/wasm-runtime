@@ -4,6 +4,7 @@ use crate::module::{function::Function, number::Number};
 pub struct Frame {
     pub function: Function,
     pub local_vars: Vec<Number>,
+    counter: usize,
 }
 
 impl Default for Frame {
@@ -18,11 +19,20 @@ impl Frame {
         Frame {
             local_vars: local_vars,
             function,
+            counter: 0,
         }
     }
 
     pub fn reference_local_var(&self, local_idx: usize) -> Number {
         self.local_vars.get(local_idx).unwrap().clone()
+    }
+
+    pub fn get_counter(&self) -> usize {
+        self.counter
+    }
+
+    pub fn increment_counter(&mut self, n: usize) {
+        self.counter += n;
     }
 
     pub fn inspect(&self) -> String {
