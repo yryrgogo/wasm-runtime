@@ -11,7 +11,7 @@ use std::error::Error;
 // use std::io::{BufReader, Read};
 
 use evaluator::Evaluator;
-use module::value::Value;
+use module::number::Number;
 
 use crate::decoder::Decoder;
 use crate::util::leb;
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // }
 
     let mut eval = Evaluator::new(decoder.module);
-    eval.invoke("fib".to_string(), vec![Value::Int32(10)]);
+    eval.invoke("fib".to_string(), vec![Number::i32(Some(10))]);
 
     Ok(())
 }

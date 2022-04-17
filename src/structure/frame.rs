@@ -1,9 +1,9 @@
 use crate::module::{function::Function, number::Number};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Frame {
     pub function: Function,
-    local_vars: Vec<Number>,
+    pub local_vars: Vec<Number>,
 }
 
 impl Default for Frame {
@@ -22,8 +22,8 @@ impl Frame {
         }
     }
 
-    pub fn reference_local_var(&self, local_idx: usize) -> &Number {
-        &self.local_vars[local_idx]
+    pub fn reference_local_var(&self, local_idx: usize) -> Number {
+        self.local_vars.get(local_idx).unwrap().clone()
     }
 
     pub fn inspect(&self) -> String {

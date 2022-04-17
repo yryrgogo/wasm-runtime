@@ -1,7 +1,7 @@
-use crate::{module::value::Value, structure::frame::Frame};
+use crate::{module::number::Number, structure::frame::Frame};
 
 #[derive(Debug)]
 pub enum Instructions {
     Frame(Frame),
-    Value(Value),
+    Number(Number),
 }

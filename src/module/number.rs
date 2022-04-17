@@ -38,7 +38,7 @@ impl NumberType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Number {
     bits: u8,
     pub num_type: NumberType,

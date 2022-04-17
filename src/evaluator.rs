@@ -1,5 +1,4 @@
 use crate::module::number::{Number, NumberType};
-use crate::module::value::Value;
 use crate::structure::frame::Frame;
 use crate::{module::Module, stack::Stack};
 
@@ -27,46 +26,18 @@ impl Evaluator {
                 .get(func.func_type.parameters.len() - i - 1)
                 .unwrap();
             let value = self.stack.pop_value();
-            match value {
-                Value::Int32(v) => {
-                    if *arg_type == NumberType::Int32 {
-                        args.push(Number::i32(Some(v)));
-                        continue;
-                    }
-                    panic!(
-                        "invalid popped value. Int32 is expected. {:?} {:?}",
-                        value, arg_type
-                    )
+            match value.num_type {
+                NumberType::Int32 => {
+                    args.push(value);
                 }
-                Value::Int64(v) => {
-                    if *arg_type == NumberType::Int64 {
-                        args.push(Number::i64(Some(v)));
-                        continue;
-                    }
-                    panic!(
-                        "invalid popped value. Int64 is expected. {:?} {:?}",
-                        value, arg_type
-                    )
+                NumberType::Int64 => {
+                    args.push(value);
                 }
-                Value::Float32(v) => {
-                    if *arg_type == NumberType::Float32 {
-                        args.push(Number::f32(Some(v)));
-                        continue;
-                    }
-                    panic!(
-                        "invalid popped value. Float32 is expected. {:?} {:?}",
-                        value, arg_type
-                    )
+                NumberType::Float32 => {
+                    args.push(value);
                 }
-                Value::Float64(v) => {
-                    if *arg_type == NumberType::Float64 {
-                        args.push(Number::f64(Some(v)));
-                        continue;
-                    }
-                    panic!(
-                        "invalid popped value. Float64 is expected. {:?} {:?}",
-                        value, arg_type
-                    )
+                NumberType::Float64 => {
+                    args.push(value);
                 }
             };
         }
@@ -74,26 +45,54 @@ impl Evaluator {
         self.stack.push_frame(Frame::new(func, args))
     }
 
-    fn execute(&self, opcode: &u8) {
-        todo!("{:b} {:x}", opcode, opcode)
+    fn execute(&mut self, opcode: &u8, expression: &Vec<u8>, mut counter: usize) -> usize {
+        match opcode {
+            0x20 => self.execute_local_get(expression, counter),
+            0x21 => self.execute_local_get(expression, counter),
+            _ => {
+                todo!("{:x} {:b} {}", opcode, opcode, opcode)
+            }
+        }
     }
 
-    pub fn invoke(&mut self, func_name: String, args: Vec<Value>) {
+    fn execute_local_get(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
+        let local_idx = expression.get(counter).unwrap();
+        counter += 1;
+        let local_var = self
+            .stack
+            .current_frame()
+            .reference_local_var(*local_idx as usize);
+
+        let v = local_var;
+        self.stack.push_values(vec![v]);
+        counter
+    }
+
+    fn execute_local_set(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
+        let local_idx = expression.get(counter).unwrap();
+        counter += 1;
+        // frame.local_vars[*local_idx as usize] = self.stack.pop_value();
+        counter
+    }
+
+    pub fn invoke(&mut self, func_name: String, args: Vec<Number>) {
         self.stack.push_values(args);
         let func_idx = self.module.exported.get(&func_name).unwrap().index;
 
         self.call(func_idx);
 
-        println!("{:?}", self.stack.frame_positions);
+        // FIXME: 2022/4/11 Frame を取り出して mutable として持ち回すしかないか、clone で取り出した frame に変更を加えていって問題ないかを確認する
+        let mut frame = self.stack.current_frame();
 
         loop {
             let mut counter: usize = 0;
+
             match self.stack.frame_positions.last() {
                 Some(_) => {
                     let expression = self.stack.current_expression();
                     let opcode = expression.get(counter).unwrap();
-                    self.execute(opcode);
                     counter += 1;
+                    counter = self.execute(opcode, &expression, counter);
                 }
                 None => break,
             }

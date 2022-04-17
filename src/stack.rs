@@ -1,5 +1,5 @@
 use crate::instructions::Instructions;
-use crate::module::value::Value;
+use crate::module::number::Number;
 use crate::structure::frame::Frame;
 
 pub struct Stack {
@@ -15,9 +15,9 @@ impl Stack {
         }
     }
 
-    pub fn push_values(&mut self, values: Vec<Value>) {
+    pub fn push_values(&mut self, values: Vec<Number>) {
         for value in values {
-            self.stack.push(Instructions::Value(value));
+            self.stack.push(Instructions::Number(value));
         }
     }
 
@@ -26,25 +26,25 @@ impl Stack {
         self.frame_positions.push(self.stack.len() - 1);
     }
 
-    pub fn pop_value(&mut self) -> Value {
+    pub fn pop_value(&mut self) -> Number {
         let instruction = self.stack.pop().unwrap();
         match instruction {
             Instructions::Frame(_) => panic!("stack top is not value: {:?}", instruction),
-            Instructions::Value(v) => v,
+            Instructions::Number(v) => v,
         }
     }
 
-    pub fn current_frame(&self) -> &Frame {
+    pub fn current_frame(&self) -> Frame {
         let idx = self.frame_positions.last().unwrap();
         let instruction = self.stack.get(*idx).unwrap();
         match instruction {
-            Instructions::Frame(frame) => frame,
-            Instructions::Value(_) => panic!("position {} is not a Frame", idx),
+            Instructions::Frame(ref frame) => frame.clone(),
+            Instructions::Number(_) => panic!("position {} is not a Frame", idx),
         }
     }
 
-    pub fn current_expression(&self) -> &Vec<u8> {
+    pub fn current_expression(&self) -> Vec<u8> {
         let frame = self.current_frame();
-        &frame.function.expressions
+        frame.function.expressions
     }
 }
