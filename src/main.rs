@@ -18,15 +18,15 @@ use crate::util::leb;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // LEB128 Test
-    let unsigned_leb_arr = leb::get_unsigned_leb128(624485);
-    match leb::read_unsigned_leb128(unsigned_leb_arr.to_vec(), 32) {
-        Ok(()) => println!("OK!"),
+    let bytes = leb::get_unsigned_leb128(624485);
+    match leb::read_unsigned_leb128(&bytes.to_vec()) {
+        Ok((value, size)) => println!("OK! size: {} {}", value, size),
         Err(err) => println!("Error! {}", err),
     }
 
     let signed_leb_arr = leb::get_signed_leb128(-123456);
     // let signed_leb_arr = [0xC0, 0xBB, 0x78];
-    match leb::read_signed_leb128(signed_leb_arr.to_vec(), 32) {
+    match leb::read_signed_leb128(signed_leb_arr.to_vec()) {
         Ok(()) => println!("OK!"),
         Err(err) => println!("Error! {}", err),
     }

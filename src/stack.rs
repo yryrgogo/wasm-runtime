@@ -34,6 +34,15 @@ impl Stack {
         }
     }
 
+    pub fn peek(&self) -> Number {
+        let instruction = self.stack.last().unwrap();
+        if let Instructions::Number(v) = instruction {
+            v.clone()
+        } else {
+            panic!("stack top is not value: {:?}", instruction)
+        }
+    }
+
     pub fn current_frame(&self) -> Frame {
         let idx = self.frame_positions.last().unwrap();
         let instruction = self.stack.get(*idx).unwrap();

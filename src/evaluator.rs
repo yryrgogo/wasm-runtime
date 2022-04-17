@@ -1,5 +1,6 @@
 use crate::module::number::{Number, NumberType};
 use crate::structure::frame::Frame;
+use crate::util::leb::read_unsigned_leb128;
 use crate::{module::Module, stack::Stack};
 
 pub struct Evaluator {
@@ -48,7 +49,8 @@ impl Evaluator {
     fn execute(&mut self, opcode: &u8, expression: &Vec<u8>, mut counter: usize) -> usize {
         match opcode {
             0x20 => self.execute_local_get(expression, counter),
-            0x21 => self.execute_local_get(expression, counter),
+            0x21 => self.execute_local_set(expression, counter),
+            0x22 => self.execute_local_tee(expression, counter),
             _ => {
                 todo!("{:x} {:b} {}", opcode, opcode, opcode)
             }
@@ -63,16 +65,30 @@ impl Evaluator {
             .current_frame()
             .reference_local_var(*local_idx as usize);
 
-        let v = local_var;
-        self.stack.push_values(vec![v]);
+        self.stack.push_values(vec![local_var]);
         counter
     }
 
     fn execute_local_set(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
-        let local_idx = expression.get(counter).unwrap();
-        counter += 1;
-        // frame.local_vars[*local_idx as usize] = self.stack.pop_value();
-        counter
+        match read_unsigned_leb128(expression) {
+            Ok((local_idx, size)) => {
+                counter += size;
+                self.stack.current_frame().local_vars[local_idx as usize] = self.stack.pop_value();
+                counter
+            }
+            Err(err) => panic!("Unsigned LEB128 の読み込みに失敗しました。 {}", err),
+        }
+    }
+
+    fn execute_local_tee(&mut self, expression: &Vec<u8>, mut counter: usize) -> usize {
+        match read_unsigned_leb128(expression) {
+            Ok((local_idx, size)) => {
+                counter += size;
+                self.stack.current_frame().local_vars[local_idx as usize] = self.stack.peek();
+                counter
+            }
+            Err(err) => panic!("Unsigned LEB128 の読み込みに失敗しました。 {}", err),
+        }
     }
 
     pub fn invoke(&mut self, func_name: String, args: Vec<Number>) {
@@ -81,12 +97,9 @@ impl Evaluator {
 
         self.call(func_idx);
 
-        // FIXME: 2022/4/11 Frame を取り出して mutable として持ち回すしかないか、clone で取り出した frame に変更を加えていって問題ないかを確認する
-        let mut frame = self.stack.current_frame();
+        let mut counter: usize = 0;
 
         loop {
-            let mut counter: usize = 0;
-
             match self.stack.frame_positions.last() {
                 Some(_) => {
                     let expression = self.stack.current_expression();

@@ -45,7 +45,7 @@ pub struct Number {
     pub value: Value,
 }
 impl Number {
-    fn new(bits: u8, num_type: NumberType, value: Value) -> Number {
+    pub fn new(bits: u8, num_type: NumberType, value: Value) -> Number {
         Number {
             bits: bits,
             num_type: num_type,
