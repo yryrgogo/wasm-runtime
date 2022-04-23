@@ -17,8 +17,8 @@ impl Stack {
     }
 
     pub fn push_values(&mut self, values: Vec<Number>) {
-        for value in values {
-            self.stack.push(Instructions::Number(value));
+        for num in values {
+            self.stack.push(Instructions::Number(num));
         }
     }
 
@@ -72,5 +72,9 @@ impl Stack {
             Some(expression) => expression.to_vec(),
             None => panic!("expression が存在しません。"),
         }
+    }
+
+    pub fn inspect(&self) -> String {
+        format!("Stack size: {}\n{:?}", self.stack.len(), self.stack)
     }
 }

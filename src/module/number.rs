@@ -54,22 +54,34 @@ impl Number {
     }
 
     pub fn i32(value: Option<i32>) -> Number {
-        let v = value.unwrap_or(0);
+        let mut v = value.unwrap();
+        if v < 0 {
+            v += 2_i32.pow(32);
+        }
         Number::new(32, NumberType::Int32, Value::Int32(v))
     }
 
     pub fn i64(value: Option<i64>) -> Number {
-        let v = value.unwrap_or(0);
+        let mut v = value.unwrap();
+        if v < 0 {
+            v += 2_i64.pow(64);
+        }
         Number::new(64, NumberType::Int64, Value::Int64(v))
     }
 
+    /**
+     * TODO: 未評価の負の値の扱いは必要？
+     */
     pub fn f32(value: Option<f32>) -> Number {
-        let v = value.unwrap_or(0.0);
+        let v = value.unwrap();
         Number::new(32, NumberType::Float32, Value::Float32(v))
     }
 
+    /**
+     * TODO: 未評価の負の値の扱いは必要？
+     */
     pub fn f64(value: Option<f64>) -> Number {
-        let v = value.unwrap_or(0.0);
+        let v = value.unwrap();
         Number::new(64, NumberType::Float64, Value::Float64(v))
     }
 

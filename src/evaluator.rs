@@ -66,8 +66,10 @@ impl Evaluator {
                 Some(0x22) => self.execute_local_tee(frame),
                 Some(0x41) => self.execute_i32_const(frame),
                 Some(opcode) => {
-                    println!("{:?}", self.stack.stack);
-                    todo!("opcode: {:x}", opcode);
+                    println!("[execute] {:?}", frame);
+                    println!("[execute] {}", self.stack.inspect());
+                    println!("[execute] opcode: {:x}", opcode);
+                    todo!();
                 }
                 None => break,
             }
