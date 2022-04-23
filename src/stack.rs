@@ -38,49 +38,37 @@ impl Stack {
     pub fn peek(&self) -> Number {
         let instruction = self.stack.last().unwrap();
         if let Instructions::Number(v) = instruction {
-            *v
+            v.clone()
         } else {
             panic!("stack top is not value: {:?}", instruction)
         }
     }
 
-    pub fn current_instruction(&self) -> Instructions {
-        let idx = self.frame_positions.last().unwrap();
-        let mut instruction = self.stack.get(*idx).unwrap();
-        *instruction
-    }
-
-    pub fn current_frame(&self) -> Frame {
-        let i = self.current_instruction();
-        match i {
-            Instructions::Frame(f) => f,
-            Instructions::Number(_) => todo!(),
-        }
-    }
-
-    pub fn next_opcode(&mut self) -> u8 {
-        match self
-            .current_frame()
-            .function
-            .expressions
-            .get(self.current_frame().get_counter())
-        {
-            Some(o) => {
-                self.current_frame().increment_counter(1);
-                println!("c: {}", self.current_frame().get_counter());
-                *o
+    pub fn current_frame(&self) -> Option<Frame> {
+        match self.frame_positions.last() {
+            Some(idx) => {
+                let instruction = self.stack.get(*idx).unwrap();
+                match instruction {
+                    Instructions::Frame(f) => Some(f.clone()),
+                    Instructions::Number(_) => todo!(),
+                }
             }
-            None => panic!("expression が存在しません。"),
+            None => None,
         }
     }
 
-    pub fn current_expression(&self) -> Vec<u8> {
-        match self
-            .current_frame()
-            .function
-            .expressions
-            .get(self.current_frame().get_counter()..)
-        {
+    pub fn next_opcode(&mut self, frame: &mut Frame) -> Option<u8> {
+        let counter = frame.get_counter();
+        frame.increment_counter(1);
+        println!("[next_opcode] counter: {}", counter);
+        match frame.function.expressions.get(counter) {
+            Some(o) => Some(*o),
+            None => None,
+        }
+    }
+
+    pub fn current_expression(&self, frame: &mut Frame) -> Vec<u8> {
+        match frame.function.expressions.get(frame.get_counter()..) {
             Some(expression) => expression.to_vec(),
             None => panic!("expression が存在しません。"),
         }
