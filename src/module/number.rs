@@ -61,12 +61,20 @@ impl Number {
         Number::new(32, NumberType::Int32, Value::Int32(v))
     }
 
+    pub fn i32_from_value(value: Value) -> Number {
+        Number::new(32, NumberType::Int32, value)
+    }
+
     pub fn i64(value: Option<i64>) -> Number {
         let mut v = value.unwrap();
         if v < 0 {
             v += 2_i64.pow(64);
         }
         Number::new(64, NumberType::Int64, Value::Int64(v))
+    }
+
+    pub fn i64_from_value(value: Value) -> Number {
+        Number::new(64, NumberType::Int64, value)
     }
 
     /**

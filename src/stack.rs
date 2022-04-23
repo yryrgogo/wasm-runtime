@@ -16,10 +16,8 @@ impl Stack {
         }
     }
 
-    pub fn push_values(&mut self, values: Vec<Number>) {
-        for num in values {
-            self.stack.push(Instructions::Number(num));
-        }
+    pub fn push_values(&mut self, num: Number) {
+        self.stack.push(Instructions::Number(num));
     }
 
     pub fn push_frame(&mut self, frame: Frame) {
