@@ -55,14 +55,13 @@ impl Stack {
         }
     }
 
-    pub fn next_opcode(&mut self, frame: &mut Frame) -> Option<u8> {
+    pub fn next_opcode(&mut self, frame: &mut Frame) -> u8 {
         let counter = frame.get_counter();
         frame.increment_counter(1);
-        println!("[next_opcode] counter: {}", counter);
-        match frame.function.expressions.get(counter) {
-            Some(o) => Some(*o),
-            None => None,
-        }
+
+        let opcode = frame.function.expressions.get(counter).unwrap();
+        println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
+        *opcode
     }
 
     pub fn current_expression(&self, frame: &mut Frame) -> Vec<u8> {

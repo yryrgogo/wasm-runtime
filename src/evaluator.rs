@@ -63,19 +63,18 @@ impl Evaluator {
     fn execute(&mut self, frame: &mut Frame) {
         loop {
             match self.stack.next_opcode(frame) {
-                Some(0x20) => self.execute_local_get(frame),
-                Some(0x21) => self.execute_local_set(frame),
-                Some(0x22) => self.execute_local_tee(frame),
-                Some(0x41) => self.execute_i32_const(frame),
-                Some(0x4f) => self.execute_i32_ge_u(),
-                Some(0x6A) => self.execute_i32_add(),
-                Some(opcode) => {
+                0x20 => self.execute_local_get(frame),
+                0x21 => self.execute_local_set(frame),
+                0x22 => self.execute_local_tee(frame),
+                0x41 => self.execute_i32_const(frame),
+                0x4f => self.execute_i32_ge_u(),
+                0x6A => self.execute_i32_add(),
+                opcode => {
                     println!("[execute] {:?}", frame);
                     println!("[execute] {}", self.stack.inspect());
                     println!("[execute] opcode: {:x}", opcode);
                     todo!();
                 }
-                None => break,
             }
         }
     }
@@ -83,43 +82,58 @@ impl Evaluator {
     fn execute_local_get(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         let local_var = frame.reference_local_var(local_idx as usize);
+
+        println!("[local_get] {:?}", local_var);
+
         self.stack.push_values(local_var);
     }
 
     fn execute_local_set(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.pop_value();
+
+        println!("[local_set] {:?}", frame.local_vars[local_idx]);
     }
 
     fn execute_local_tee(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.peek();
+
+        println!("[local_tee] {:?}", frame.local_vars[local_idx]);
     }
 
     fn execute_i32_const(&mut self, frame: &mut Frame) {
         let value = self.read_s_leb128(frame);
         self.stack.push_values(Number::i32(Some(value as i32)));
+
+        println!("[local_tee] {:?}", Number::i32(Some(value as i32)));
     }
 
     // 0x4f
     fn execute_i32_ge_u(&mut self) {
         let n2 = self.stack.pop_value();
         let n1 = self.stack.pop_value();
+        let result: Number;
         if n1.value > n2.value {
-            self.stack.push_values(Number::i32(Some(1 as i32)));
+            result = Number::i32(Some(1));
         } else {
-            self.stack.push_values(Number::i32(Some(0 as i32)));
+            result = Number::i32(Some(0));
         }
+
+        println!("[i32_ge_u] {:?}", result);
+        self.stack.push_values(result);
     }
 
+    // 0x6A
     fn execute_i32_add(&mut self) {
-        let mut n2 = self.stack.pop_value();
-        let mut n1 = self.stack.pop_value();
-        if n2.value >= 2_i32.pow(32) {
-            n2.value = n2.value - 2_i32.pow(32);
+        let n2 = self.stack.pop_value();
+        let n1 = self.stack.pop_value();
+        let mut n: i32 = n1.value.i32() + n2.value.i32();
+        if n1.value.i32() >= 2_i32.pow(32) || n2.value.i32() >= 2_i32.pow(32) {
+            n = n - 2_i32.pow(32);
         }
-        self.stack
-            .push_values(Number::i32(Some(n1.value + n2.value)));
+        self.stack.push_values(Number::i32(Some(n)));
+        println!("[i32_ge_u] {:?}", Number::i32(Some(n)));
     }
 
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
