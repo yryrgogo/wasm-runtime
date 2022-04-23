@@ -254,9 +254,7 @@ impl Decoder {
             };
         }
 
-        for (_, block) in blocks {
-            println!("{}", block.inspect());
-        }
+        self.module.functions[func_idx].blocks = blocks;
     }
 
     fn decode_type(&mut self) -> Result<NumberType, Box<dyn Error>> {
@@ -400,5 +398,14 @@ impl Decoder {
         }
 
         [value, byte_count]
+    }
+
+    pub fn inspect(&self) {
+        for func in self.module.functions.clone() {
+            println!("{}", func.inspect());
+            for (_, block) in func.blocks {
+                println!("{}", block.inspect());
+            }
+        }
     }
 }

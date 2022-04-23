@@ -1,3 +1,4 @@
+use crate::module::function::Block;
 use crate::module::number::{Number, NumberType};
 use crate::structure::frame::Frame;
 use crate::util::leb::read_signed_leb128;
@@ -63,12 +64,13 @@ impl Evaluator {
     fn execute(&mut self, frame: &mut Frame) {
         loop {
             match self.stack.next_opcode(frame) {
-                0x20 => self.execute_local_get(frame),
-                0x21 => self.execute_local_set(frame),
-                0x22 => self.execute_local_tee(frame),
-                0x41 => self.execute_i32_const(frame),
-                0x4f => self.execute_i32_ge_u(),
-                0x6A => self.execute_i32_add(),
+                0x02 => self.operate_block(frame),
+                0x20 => self.operate_local_get(frame),
+                0x21 => self.operate_local_set(frame),
+                0x22 => self.operate_local_tee(frame),
+                0x41 => self.operate_i32_const(frame),
+                0x4f => self.operate_i32_ge_u(),
+                0x6A => self.operate_i32_add(),
                 opcode => {
                     println!("[execute] {:?}", frame);
                     println!("[execute] {}", self.stack.inspect());
@@ -79,7 +81,19 @@ impl Evaluator {
         }
     }
 
-    fn execute_local_get(&mut self, frame: &mut Frame) {
+    // 0x02
+    fn operate_block(&mut self, frame: &mut Frame) {
+        let block_start_counter = frame.get_counter();
+        let label = *frame
+            .function
+            .blocks
+            .get(&block_start_counter)
+            .unwrap_or_else(|| panic!(""));
+        self.stack.push_label(label);
+        frame.set_counter(label.start_idx - 1);
+    }
+
+    fn operate_local_get(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         let local_var = frame.reference_local_var(local_idx as usize);
 
@@ -88,21 +102,21 @@ impl Evaluator {
         self.stack.push_values(local_var);
     }
 
-    fn execute_local_set(&mut self, frame: &mut Frame) {
+    fn operate_local_set(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.pop_value();
 
         println!("[local_set] {:?}", frame.local_vars[local_idx]);
     }
 
-    fn execute_local_tee(&mut self, frame: &mut Frame) {
+    fn operate_local_tee(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.peek();
 
         println!("[local_tee] {:?}", frame.local_vars[local_idx]);
     }
 
-    fn execute_i32_const(&mut self, frame: &mut Frame) {
+    fn operate_i32_const(&mut self, frame: &mut Frame) {
         let value = self.read_s_leb128(frame);
         self.stack.push_values(Number::i32(Some(value as i32)));
 
@@ -110,7 +124,7 @@ impl Evaluator {
     }
 
     // 0x4f
-    fn execute_i32_ge_u(&mut self) {
+    fn operate_i32_ge_u(&mut self) {
         let n2 = self.stack.pop_value();
         let n1 = self.stack.pop_value();
         let result: Number;
@@ -125,7 +139,7 @@ impl Evaluator {
     }
 
     // 0x6A
-    fn execute_i32_add(&mut self) {
+    fn operate_i32_add(&mut self) {
         let n2 = self.stack.pop_value();
         let n1 = self.stack.pop_value();
         let mut n: i32 = n1.value.i32() + n2.value.i32();

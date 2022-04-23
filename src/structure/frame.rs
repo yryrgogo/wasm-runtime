@@ -31,6 +31,10 @@ impl Frame {
         self.counter
     }
 
+    pub fn set_counter(&mut self, n: usize) {
+        self.counter = n;
+    }
+
     pub fn increment_counter(&mut self, n: usize) {
         self.counter += n;
     }

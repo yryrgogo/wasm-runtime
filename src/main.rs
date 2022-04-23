@@ -39,6 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut decoder = Decoder::new(path).unwrap();
     decoder.validate_header();
     decoder.decode_section().unwrap();
+    decoder.inspect();
 
     // println!("Rest binary");
     // for i in 0..40 {

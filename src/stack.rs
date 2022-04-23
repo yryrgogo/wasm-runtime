@@ -1,4 +1,5 @@
 use crate::instructions::Instructions;
+use crate::module::function::Block;
 use crate::module::number::Number;
 use crate::structure::frame::Frame;
 
@@ -6,6 +7,7 @@ use crate::structure::frame::Frame;
 pub struct Stack {
     pub stack: Vec<Instructions>,
     pub frame_positions: Vec<usize>,
+    pub label_positions: Vec<usize>,
 }
 
 impl Stack {
@@ -13,6 +15,7 @@ impl Stack {
         Stack {
             stack: vec![],
             frame_positions: vec![],
+            label_positions: vec![],
         }
     }
 
@@ -25,11 +28,16 @@ impl Stack {
         self.frame_positions.push(self.stack.len() - 1);
     }
 
+    pub fn push_label(&mut self, block: Block) {
+        self.stack.push(Instructions::Block(block));
+        self.label_positions.push(self.stack.len() - 1);
+    }
+
     pub fn pop_value(&mut self) -> Number {
         let instruction = self.stack.pop().unwrap();
         match instruction {
-            Instructions::Frame(_) => panic!("stack top is not value: {:?}", instruction),
             Instructions::Number(v) => v,
+            _ => panic!("stack top is not value: {:?}", instruction),
         }
     }
 
@@ -42,19 +50,6 @@ impl Stack {
         }
     }
 
-    pub fn current_frame(&self) -> Option<Frame> {
-        match self.frame_positions.last() {
-            Some(idx) => {
-                let instruction = self.stack.get(*idx).unwrap();
-                match instruction {
-                    Instructions::Frame(f) => Some(f.clone()),
-                    Instructions::Number(_) => todo!(),
-                }
-            }
-            None => None,
-        }
-    }
-
     pub fn next_opcode(&mut self, frame: &mut Frame) -> u8 {
         let counter = frame.get_counter();
         frame.increment_counter(1);
@@ -62,6 +57,19 @@ impl Stack {
         let opcode = frame.function.expressions.get(counter).unwrap();
         println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
         *opcode
+    }
+
+    pub fn current_frame(&self) -> Option<Frame> {
+        match self.frame_positions.last() {
+            Some(idx) => {
+                let instruction = self.stack.get(*idx).unwrap();
+                match instruction {
+                    Instructions::Frame(f) => Some(f.clone()),
+                    _ => unreachable!(),
+                }
+            }
+            None => None,
+        }
     }
 
     pub fn current_expression(&self, frame: &mut Frame) -> Vec<u8> {

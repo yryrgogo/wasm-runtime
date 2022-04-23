@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{
     function_type::FunctionType,
     number::{Number, NumberType},
@@ -8,6 +10,7 @@ pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
     pub expressions: Vec<u8>,
+    pub blocks: HashMap<usize, Block>,
 }
 
 impl Default for Function {
@@ -23,6 +26,7 @@ impl Function {
             func_type: func_type,
             local_vars: vec![],
             expressions: vec![],
+            blocks: HashMap::new(),
         }
     }
     pub fn create_local_variables(&self) -> Vec<Number> {
@@ -50,6 +54,7 @@ impl Function {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Block {
     pub instruction: u8,
     pub start_idx: usize,
