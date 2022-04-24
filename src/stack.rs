@@ -2,7 +2,7 @@ use crate::instructions::Instructions;
 use crate::module::function::Block;
 use crate::module::number::{
     Number,
-    NumberType::{Float32, Float64, Int32, Int64},
+    NumberType::{Float32, Float64, Int32, Int64, Uint32, Uint64},
 };
 use crate::structure::frame::Frame;
 
@@ -27,7 +27,6 @@ impl Stack {
             Int32 => {
                 if num.value.i32().is_negative() {
                     let v = 2_u32.pow(31) - num.value.i32().wrapping_abs() as u32 + 2_u32.pow(31);
-                    println!("############### eval");
                     num = Number::u32(Some(v));
                 }
             }
@@ -57,9 +56,21 @@ impl Stack {
 
     pub fn pop_value(&mut self) -> Number {
         let instruction = self.stack.pop().unwrap();
-        match instruction {
-            Instructions::Number(v) => v,
-            _ => panic!("stack top is not value: {:?}", instruction),
+        if let Instructions::Number(num) = instruction {
+            match num.num_type {
+                Uint32 => {
+                    let mut v = (num.value.u32() - 2_u32.pow(31)) as i32;
+                    v = v - 2_i32.pow(30) - 2_i32.pow(30);
+                    Number::i32(Some(v))
+                }
+                Uint64 => {
+                    let v = num.value.u64() - 2_u64.pow(31) - 2_u64.pow(31);
+                    Number::i64(Some(v as i64))
+                }
+                _ => num,
+            }
+        } else {
+            panic!("stack top is not value: {:?}", instruction)
         }
     }
 

@@ -173,12 +173,9 @@ impl Evaluator {
     fn operate_i32_add(&mut self) {
         let n2 = self.stack.pop_value();
         let n1 = self.stack.pop_value();
-        let mut n: i32 = n1.value.i32() + n2.value.i32();
-        if n1.value.i32() >= 2_i32.pow(32) || n2.value.i32() >= 2_i32.pow(32) {
-            n = n - 2_i32.pow(32);
-        }
+        let n: i32 = n1.value.i32() + n2.value.i32();
         self.stack.push_values(Number::i32(Some(n)));
-        println!("[i32_ge_u] {:?}", Number::i32(Some(n)));
+        println!("[i32_add] {:?}", Number::i32(Some(n)));
     }
 
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
