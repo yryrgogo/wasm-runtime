@@ -4,6 +4,8 @@ use super::value::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberType {
+    Uint32,
+    Uint64,
     Int32,
     Int64,
     Float32,
@@ -26,6 +28,8 @@ impl NumberType {
 
     pub fn decode_type(byte: u8) -> Result<NumberType, Box<dyn Error>> {
         Ok(match NumberType::from_byte(byte).unwrap() {
+            NumberType::Uint32 => NumberType::Uint32,
+            NumberType::Uint64 => NumberType::Uint64,
             NumberType::Int32 => NumberType::Int32,
             NumberType::Int64 => NumberType::Int64,
             NumberType::Float32 => NumberType::Float32,
@@ -53,33 +57,31 @@ impl Number {
         }
     }
 
+    pub fn u32(value: Option<u32>) -> Number {
+        let v = value.unwrap();
+        Number::new(32, NumberType::Uint32, Value::Uint32(v))
+    }
+
+    pub fn u64(value: Option<u64>) -> Number {
+        let v = value.unwrap();
+        Number::new(64, NumberType::Uint64, Value::Uint64(v))
+    }
+
     pub fn i32(value: Option<i32>) -> Number {
-        let mut v = value.unwrap();
-        if v < 0 {
-            v += 2_i32.pow(32);
-        }
+        let v = value.unwrap();
         Number::new(32, NumberType::Int32, Value::Int32(v))
     }
 
     pub fn i64(value: Option<i64>) -> Number {
-        let mut v = value.unwrap();
-        if v < 0 {
-            v += 2_i64.pow(64);
-        }
+        let v = value.unwrap();
         Number::new(64, NumberType::Int64, Value::Int64(v))
     }
 
-    /**
-     * TODO: 未評価の負の値の扱いは必要？
-     */
     pub fn f32(value: Option<f32>) -> Number {
         let v = value.unwrap();
         Number::new(32, NumberType::Float32, Value::Float32(v))
     }
 
-    /**
-     * TODO: 未評価の負の値の扱いは必要？
-     */
     pub fn f64(value: Option<f64>) -> Number {
         let v = value.unwrap();
         Number::new(64, NumberType::Float64, Value::Float64(v))

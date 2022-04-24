@@ -1,4 +1,3 @@
-use crate::module::function::Block;
 use crate::module::number::{Number, NumberType};
 use crate::structure::frame::Frame;
 use crate::util::leb::read_signed_leb128;
@@ -55,6 +54,7 @@ impl Evaluator {
                 NumberType::Float64 => {
                     args.push(value);
                 }
+                _ => unreachable!(),
             };
         }
         args.reverse();
@@ -65,9 +65,12 @@ impl Evaluator {
         loop {
             match self.stack.next_opcode(frame) {
                 0x02 => self.operate_block(frame),
+                0x03 => self.operate_block(frame),
+                0x04 => self.operate_if(frame),
                 0x20 => self.operate_local_get(frame),
                 0x21 => self.operate_local_set(frame),
                 0x22 => self.operate_local_tee(frame),
+                0x40 => self.operate_grow_memory(frame),
                 0x41 => self.operate_i32_const(frame),
                 0x4f => self.operate_i32_ge_u(),
                 0x6A => self.operate_i32_add(),
@@ -90,7 +93,27 @@ impl Evaluator {
             .get(&block_start_counter)
             .unwrap_or_else(|| panic!(""));
         self.stack.push_label(label);
-        frame.set_counter(label.start_idx - 1);
+        frame.set_counter(label.start_idx + 1);
+
+        println!("[operate_block] label {:?}", label);
+    }
+
+    // 0x04
+    fn operate_if(&mut self, frame: &mut Frame) {
+        let num = self.stack.pop_value();
+        if num.value.i32() == 0 {
+            let block_start_counter = frame.get_counter();
+            let label = *frame
+                .function
+                .blocks
+                .get(&block_start_counter)
+                .unwrap_or_else(|| panic!("[operate_if] Label の取得に失敗しました。"));
+            frame.set_counter(label.end_idx + 1);
+        } else {
+            self.operate_block(frame);
+        }
+
+        println!("[if] {:?}", num);
     }
 
     fn operate_local_get(&mut self, frame: &mut Frame) {
@@ -116,11 +139,19 @@ impl Evaluator {
         println!("[local_tee] {:?}", frame.local_vars[local_idx]);
     }
 
+    // 0x40
+    fn operate_grow_memory(&mut self, frame: &mut Frame) {
+        let size = self.read_u_leb128(frame);
+        // TODO:
+        println!("[operate_grow_memory]grow {} memory", size)
+    }
+
+    // 0x41
     fn operate_i32_const(&mut self, frame: &mut Frame) {
         let value = self.read_s_leb128(frame);
         self.stack.push_values(Number::i32(Some(value as i32)));
 
-        println!("[local_tee] {:?}", Number::i32(Some(value as i32)));
+        println!("[i32_const] {:?}", Number::i32(Some(value as i32)));
     }
 
     // 0x4f

@@ -37,6 +37,7 @@ impl Function {
                 NumberType::Int64 => Number::i64(Some(0)),
                 NumberType::Float32 => Number::f32(Some(0.0)),
                 NumberType::Float64 => Number::f64(Some(0.0)),
+                _ => unreachable!(),
             })
             .collect::<Vec<Number>>()
     }

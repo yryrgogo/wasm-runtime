@@ -49,6 +49,7 @@ pub fn read_signed_leb128(bytes: &Vec<u8>) -> Result<(isize, usize), Box<dyn std
             panic!("Invalid LEB128 encoding");
         }
     }
+
     if (value >> (shift - 1)) & 1 == 1 {
         value |= !0 << shift;
     }

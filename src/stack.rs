@@ -1,9 +1,11 @@
 use crate::instructions::Instructions;
 use crate::module::function::Block;
-use crate::module::number::Number;
+use crate::module::number::{
+    Number,
+    NumberType::{Float32, Float64, Int32, Int64},
+};
 use crate::structure::frame::Frame;
 
-#[derive(Debug)]
 pub struct Stack {
     pub stack: Vec<Instructions>,
     pub frame_positions: Vec<usize>,
@@ -19,7 +21,27 @@ impl Stack {
         }
     }
 
-    pub fn push_values(&mut self, num: Number) {
+    pub fn push_values(&mut self, mut num: Number) {
+        // NOTE: Stack に負の値は push しないため unsigned に変換する
+        match num.num_type {
+            Int32 => {
+                if num.value.i32().is_negative() {
+                    let v = 2_u32.pow(31) - num.value.i32().wrapping_abs() as u32 + 2_u32.pow(31);
+                    println!("############### eval");
+                    num = Number::u32(Some(v));
+                }
+            }
+            Int64 => {
+                if num.value.i64() < 0 {
+                    let v = num.value.i64() as u64 + 2_u64.pow(64);
+                    num = Number::u64(Some(v));
+                }
+            }
+            Float32 => todo!(),
+            Float64 => todo!(),
+            _ => unreachable!(),
+        }
+
         self.stack.push(Instructions::Number(num));
     }
 
