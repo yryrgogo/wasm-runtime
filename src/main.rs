@@ -15,7 +15,6 @@ use evaluator::Evaluator;
 use module::number::Number;
 
 use crate::decoder::Decoder;
-use crate::reader::WasmModuleReader;
 // use crate::util::leb;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -39,15 +38,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Main
 
     let path = "src/wasm/fib.wasm";
-    // show_binary_hex(path).unwrap();
+    let mut decoder = Decoder::new(path).unwrap();
 
-    let mut reader = WasmModuleReader::new(path)
-        .unwrap_or_else(|_| panic!("wasm ファイルの読み込みに失敗しました。"));
-
-    let mut decoder = Decoder::new(&mut reader).unwrap();
-    decoder.validate_header();
-
-    decoder.decode_section().unwrap();
+    decoder.run();
     decoder.inspect();
 
     // println!("Rest binary");
@@ -57,8 +50,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     println!("{:03}: {:x}", i, buf[0]);
     // }
 
-    let mut eval = Evaluator::new(decoder.module);
-    eval.invoke("fib".to_string(), vec![Number::i32(Some(10))]);
+    // let mut eval = Evaluator::new(decoder.module);
+    // eval.invoke("fib".to_string(), vec![Number::i32(Some(10))]);
 
     Ok(())
 }

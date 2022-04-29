@@ -1,5 +1,4 @@
-use crate::reader::{WasmModuleReader, LEB128_MAX_BITS};
-use crate::util::byte::byte2string;
+use crate::reader::{WasmBinaryReader, LEB128_MAX_BITS};
 use crate::{
     export::ExportMap,
     module::{
@@ -13,50 +12,66 @@ use crate::{
 };
 use std::{collections::HashMap, error::Error};
 
-pub struct Decoder<'a> {
-    reader: &'a mut WasmModuleReader,
+pub struct Decoder {
     pub module: Module,
+    pub reader: WasmBinaryReader,
 }
 
-impl<'a> Decoder<'a> {
-    pub fn new(reader: &'a mut WasmModuleReader) -> Result<Decoder<'a>, Box<dyn Error>> {
+impl Decoder {
+    pub fn new(path: &str) -> Result<Decoder, Box<dyn Error>> {
         Ok(Decoder {
-            reader: reader,
             module: Module::default(),
+            reader: WasmBinaryReader::new(path)?,
         })
     }
 
-    pub fn validate_header(&mut self) {
-        let header = self.reader.read_header();
-        let header = byte2string(Box::new(header));
+    pub fn run(&mut self) {
+        self.decode_header();
+        self.decode_section();
+    }
+
+    pub fn decode_header(&mut self) {
+        let header = String::from_utf8(Vec::from(self.reader.read_header()))
+            .unwrap_or_else(|_| panic!("ヘッダの u8 -> String 変換に失敗しました。"));
         if !self.module.valid_header(&header) {
             panic!("Invalid wasm header: {}", header);
         }
     }
 
-    pub fn decode_section(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn decode_section(&mut self) {
         loop {
-            match self.reader.read_next_byte() {
-                section_id => {
-                    let [section_size, _] = self.reader.read_unsigned_leb128();
-                    println!("Section ID: {} Size: {}", section_id, section_size);
-
-                    match SectionId::from_usize(section_id).unwrap() {
-                        SectionId::CustomSectionId => {
-                            println!("Custom Section");
-                            match self.discard_section(section_size) {
-                                Ok(()) => println!("Discard section"),
-                                Err(err) => panic!("Failed to discard section {}", err),
-                            }
-                        }
-                        SectionId::TypeSectionId => self.decode_type_section(),
-                        SectionId::FunctionSectionId => self.decode_function_section(),
-                        SectionId::ExportSectionId => self.decode_export_section().unwrap(),
-                        SectionId::CodeSectionId => self.decode_code_section(),
-                    }
-                }
-                _ => break,
+            match self.decode_section_id() {
+                Some(section_id) => self.decode_section_body(section_id).unwrap_or_else(|err| {
+                    panic!("Section Body のでコードに失敗しました。 {:?}", err)
+                }),
+                None => break,
             }
+        }
+    }
+
+    pub fn decode_section_id(&mut self) -> Option<u8> {
+        self.reader.read_next_byte()
+    }
+
+    pub fn decode_section_body(&mut self, section_id: u8) -> Result<(), Box<dyn Error>> {
+        let [section_size, decoded_size] = self.reader.read_unsigned_leb128();
+        println!(
+            "Section ID: {} Size: {} Decoded Size: {}",
+            section_id, section_size, decoded_size
+        );
+
+        match SectionId::from_usize(section_id).unwrap() {
+            SectionId::CustomSectionId => {
+                println!("Custom Section");
+                match self.discard_section(section_size) {
+                    Ok(()) => println!("Discard section"),
+                    Err(err) => panic!("Failed to discard section {}", err),
+                }
+            }
+            SectionId::TypeSectionId => self.decode_type_section(),
+            SectionId::FunctionSectionId => self.decode_function_section(),
+            SectionId::ExportSectionId => self.decode_export_section().unwrap(),
+            SectionId::CodeSectionId => self.decode_code_section(),
         }
 
         for func in self.module.functions.iter_mut() {
@@ -77,25 +92,36 @@ impl<'a> Decoder<'a> {
     fn decode_type_section(&mut self) {
         println!("Decode Type Section");
 
-        let [signature_count, _] = self.reader.read_unsigned_leb128();
-        println!("Signature count: {}", signature_count);
+        let mut pc = 0;
+        let [signature_count, size] = self.reader.read_unsigned_leb128();
+        pc += size;
+        println!(
+            "Signature count: {} Decoded size: {}",
+            signature_count, size
+        );
 
-        let header = self.reader.read_next_byte();
-        TypeSection::validate_header(header);
+        TypeSection::validate_header(
+            self.reader
+                .read_next_byte()
+                .unwrap_or_else(|| panic!("TypeSection のヘッダが見つかりません。")),
+        );
+        pc += 1;
 
         for s_i in 0..signature_count {
             println!("Signature {}", s_i + 1);
 
             let mut func_type = FunctionType::default();
 
-            let [parameter_count, _] = self.reader.read_unsigned_leb128();
+            let [parameter_count, size] = self.reader.read_unsigned_leb128();
+            pc += size;
             for p_i in 0..parameter_count {
                 let num_type = self.decode_type().unwrap();
                 println!("Parameter {} Type {:?}", p_i + 1, num_type);
                 func_type.parameters.push(num_type);
             }
 
-            let [result_count, _] = self.reader.read_unsigned_leb128();
+            let [result_count, size] = self.reader.read_unsigned_leb128();
+            pc += size;
 
             // NOTE: 202203時点の仕様では戻り値は1つまで
             assert_eq!(result_count, 1);
@@ -112,10 +138,14 @@ impl<'a> Decoder<'a> {
     fn decode_function_section(&mut self) {
         println!("Decode Function Section");
 
-        let [function_count, _] = self.reader.read_unsigned_leb128();
+        let mut pc = 0;
+        let [function_count, size] = self.reader.read_unsigned_leb128();
+        pc += size;
         println!("Function count: {}", function_count);
+
         for i in 0..function_count {
-            self.reader.read_unsigned_leb128();
+            let [_, size] = self.reader.read_unsigned_leb128();
+            pc += size;
             let func_type = self.module.function_types[i].clone();
             self.module
                 .functions
@@ -126,20 +156,29 @@ impl<'a> Decoder<'a> {
     fn decode_export_section(&mut self) -> Result<(), Box<dyn Error>> {
         println!("Decode Export Section");
 
-        let [export_count, _] = self.reader.read_unsigned_leb128();
+        let mut pc = 0;
+        let [export_count, size] = self.reader.read_unsigned_leb128();
+        pc += size;
+
         println!("Export count: {}", export_count);
         for _ in 0..export_count {
             let [name_size, _] = self.reader.read_unsigned_leb128();
             let name_buf = self.reader.read_bytes(name_size);
             let name = std::str::from_utf8(&name_buf).unwrap();
-            let desc = self.reader.read_next_byte();
-            let index = self.reader.read_next_byte();
+            let desc = self
+                .reader
+                .read_next_byte()
+                .unwrap_or_else(|| panic!("Export Section の desc byte が見つかりません"));
 
             match ExportDesc::from_usize(desc).unwrap() {
                 ExportDesc::Func => {
                     if self.module.exported.contains_key(name) {
                         panic!("{} key already exists", name);
                     }
+                    let index = self
+                        .reader
+                        .read_next_byte()
+                        .unwrap_or_else(|| panic!("Export Section の index byte が見つかりません"));
                     let func_idx = usize::from(index);
                     self.module.exported.insert(
                         name.to_string(),
@@ -161,6 +200,7 @@ impl<'a> Decoder<'a> {
     fn decode_code_section(&mut self) {
         println!("Decode Code Section");
 
+        let mut pc = 0;
         let [func_body_count, _] = self.reader.read_unsigned_leb128();
         println!("func_body Count: {}", func_body_count);
 
@@ -172,12 +212,15 @@ impl<'a> Decoder<'a> {
     fn decode_code_section_body(&mut self, func_idx: usize) {
         println!("# func_body {}", func_idx);
 
-        let [func_body_size, _] = self.reader.read_unsigned_leb128();
+        let mut pc = 0;
+        let [func_body_size, size] = self.reader.read_unsigned_leb128();
+        pc += size;
         println!("# func_body size: {}", func_body_size);
 
         let mut local_var_byte_size: usize = 0;
-        let [local_var_count, local_var_count_byte_size] = self.reader.read_unsigned_leb128();
-        local_var_byte_size += local_var_count_byte_size;
+        let [local_var_count, size] = self.reader.read_unsigned_leb128();
+        pc += size;
+        local_var_byte_size += size;
         println!("# Local Var Count: {}", local_var_count);
 
         for _ in 0..local_var_count {
@@ -186,7 +229,7 @@ impl<'a> Decoder<'a> {
             local_var_byte_size += 1;
         }
         let expression_buf = self.reader.read_bytes(func_body_size - local_var_byte_size);
-        self.module.functions[func_idx].expressions = expression_buf;
+        self.module.functions[func_idx].expressions = expression_buf.to_vec();
 
         println!("{}", self.module.functions[func_idx].inspect());
 
@@ -234,11 +277,13 @@ impl<'a> Decoder<'a> {
                             blocks.insert(block.start_idx, block);
                         }
                         op => {
-                            let opcode = self.reader.read_next_byte();
-                            let arity: Vec<NumberType> = if opcode as u8 == 0x40 {
+                            let opcode = self.reader.read_next_byte().unwrap_or_else(|| {
+                                panic!("Block Section の arity 読み込みに失敗しました。")
+                            });
+                            let arity: Vec<NumberType> = if opcode == 0x40 {
                                 vec![]
                             } else {
-                                let v = NumberType::from_byte(opcode as u8).unwrap_or_else(|| {
+                                let v = NumberType::from_byte(opcode).unwrap_or_else(|| {
                                     panic!("NumberType に渡した byte 値が不正です。")
                                 });
                                 vec![v]
@@ -257,7 +302,10 @@ impl<'a> Decoder<'a> {
     }
 
     fn decode_type(&mut self) -> Result<NumberType, Box<dyn Error>> {
-        let byte = self.reader.read_next_byte();
+        let byte = self
+            .reader
+            .read_next_byte()
+            .unwrap_or_else(|| panic!("Value Type の byte 読み込みに失敗しました。"));
         NumberType::decode_type(byte)
     }
 
@@ -304,20 +352,20 @@ impl<'a> Decoder<'a> {
         Ok(())
     }
 
-    fn decode_unsigned_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
+    fn decode_unsigned_leb128(buf: &[u8]) -> [usize; 2] {
         let mut value: usize = 0;
         let mut shift: usize = 0;
         let mut byte_count: usize = 0;
 
         loop {
-            let byte = buf.pop().unwrap();
+            let byte = buf[0];
+            byte_count += 1;
             value |= ((byte & 0x7F) as usize) << shift;
             shift += 7;
 
             if ((byte >> 7) & 1) != 1 {
                 break;
             }
-            byte_count += 1;
             if shift > LEB128_MAX_BITS {
                 panic!("Invalid LEB128 encoding");
             }
@@ -325,20 +373,20 @@ impl<'a> Decoder<'a> {
         [value, byte_count]
     }
 
-    fn decode_signed_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
+    fn decode_signed_leb128(buf: &[u8]) -> [usize; 2] {
         let mut value: usize = 0;
         let mut shift: usize = 0;
         let mut byte_count: usize = 0;
 
         loop {
-            let byte = buf.pop().unwrap();
+            let byte = buf[0];
+            byte_count += 1;
             value |= ((byte & 0x7F) as usize) << shift;
             shift += 7;
 
             if ((byte >> 7) & 1) != 1 {
                 break;
             }
-            byte_count += 1;
             if shift > LEB128_MAX_BITS {
                 panic!("Invalid LEB128 encoding");
             }
@@ -366,15 +414,11 @@ impl<'a> Decoder<'a> {
 
 //     #[test]
 //     fn is_true_validate_header() {
-//     let decoder = Decoder::new();
-//     }
+//         let path = "src/wasm/fib.wasm";
+//         let mut reader = WasmBinaryReader::new(path)
+//             .unwrap_or_else(|_| panic!("wasm ファイルの読み込みに失敗しました。"));
 
-//     #[test]
-//     fn is_false_when_odd() {
-//         assert!(!is_even(9));
-//         assert!(!is_even(31));
-//         assert!(!is_even(223));
-//         assert!(!is_even(3425));
-//         assert!(!is_even(82227));
+//         let mut decoder = Decoder::new(&mut reader).unwrap();
+//         decoder.validate_header();
 //     }
 // }
