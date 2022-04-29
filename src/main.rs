@@ -3,6 +3,7 @@ mod evaluator;
 mod export;
 mod instructions;
 mod module;
+mod reader;
 mod stack;
 mod structure;
 mod util;
@@ -14,7 +15,8 @@ use evaluator::Evaluator;
 use module::number::Number;
 
 use crate::decoder::Decoder;
-use crate::util::leb;
+use crate::reader::WasmModuleReader;
+// use crate::util::leb;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // // LEB128 Test
@@ -39,8 +41,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path = "src/wasm/fib.wasm";
     // show_binary_hex(path).unwrap();
 
-    let mut decoder = Decoder::new(path).unwrap();
+    let mut reader = WasmModuleReader::new(path)
+        .unwrap_or_else(|_| panic!("wasm ファイルの読み込みに失敗しました。"));
+
+    let mut decoder = Decoder::new(&mut reader).unwrap();
     decoder.validate_header();
+
     decoder.decode_section().unwrap();
     decoder.inspect();
 

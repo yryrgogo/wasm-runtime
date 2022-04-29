@@ -326,12 +326,13 @@ impl OpCode {
     }
 
     pub fn to_byte(&self) -> u8 {
-        match self {
+        match &self {
+            OpCode::GrowMemory => 0x40,
             OpCode::I32Const => 0x41,
             OpCode::I64Const => 0x42,
             OpCode::F32Const => 0x43,
             OpCode::F64Const => 0x44,
-            _ => unimplemented!(),
+            _ => panic!("[Opcode::to_byte] {:?}", &self),
         }
     }
 
