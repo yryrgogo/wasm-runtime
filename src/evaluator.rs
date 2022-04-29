@@ -87,15 +87,16 @@ impl Evaluator {
     // 0x02
     fn operate_block(&mut self, frame: &mut Frame) {
         let block_start_counter = frame.get_counter();
-        let label = *frame
+
+        let label = (*frame
             .function
             .blocks
             .get(&block_start_counter)
-            .unwrap_or_else(|| panic!(""));
-        self.stack.push_label(label);
+            .unwrap_or_else(|| panic!("")))
+        .clone();
         frame.set_counter(label.start_idx + 1);
-
         println!("[operate_block] label {:?}", label);
+        self.stack.push_label(label);
     }
 
     // 0x04
@@ -103,11 +104,12 @@ impl Evaluator {
         let num = self.stack.pop_value();
         if num.value.i32() == 0 {
             let block_start_counter = frame.get_counter();
-            let label = *frame
+            let label = (*frame
                 .function
                 .blocks
                 .get(&block_start_counter)
-                .unwrap_or_else(|| panic!("[operate_if] Label の取得に失敗しました。"));
+                .unwrap_or_else(|| panic!("[operate_if] Label の取得に失敗しました。")))
+            .clone();
             frame.set_counter(label.end_idx + 1);
         } else {
             self.operate_block(frame);
