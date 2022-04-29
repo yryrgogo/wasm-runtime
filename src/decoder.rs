@@ -227,7 +227,12 @@ impl Decoder {
         let mut expressions = self.module.functions[func_idx].expressions.clone();
         let mut blocks: HashMap<usize, Block> = HashMap::new();
 
-        let mut block_stack = vec![Block::new(2, 0, None)];
+        let mut block_stack = vec![Block::new(
+            2,
+            self.module.function_types[func_idx].results.clone(),
+            0,
+            None,
+        )];
 
         expressions.reverse();
         loop {
@@ -244,8 +249,15 @@ impl Decoder {
                             block.end_idx = idx;
                             blocks.insert(block.start_idx, block);
                         }
-                        _ => {
-                            let block = Block::new(structured_instruction, idx, None);
+                        op => {
+                            let block = Block::new(
+                                structured_instruction,
+                                vec![NumberType::from_byte(op.to_byte()).unwrap_or_else(|| {
+                                    panic!("NumberType に渡した byte 値が不正です。")
+                                })],
+                                idx,
+                                None,
+                            );
                             block_stack.push(block);
                         }
                     };

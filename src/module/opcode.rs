@@ -325,6 +325,16 @@ impl OpCode {
         }
     }
 
+    pub fn to_byte(&self) -> u8 {
+        match self {
+            OpCode::I32Const => 0x41,
+            OpCode::I64Const => 0x42,
+            OpCode::F32Const => 0x43,
+            OpCode::F64Const => 0x44,
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn inspect(byte: u8) -> String {
         format!("{:?}", OpCode::from_byte(byte))
     }

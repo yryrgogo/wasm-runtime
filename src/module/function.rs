@@ -55,18 +55,25 @@ impl Function {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub instruction: u8,
+    pub arity: Vec<NumberType>,
     pub start_idx: usize,
     pub end_idx: usize,
 }
 
 impl Block {
-    pub fn new(instruction: u8, start_idx: usize, end_idx: Option<usize>) -> Block {
+    pub fn new(
+        instruction: u8,
+        arity: Vec<NumberType>,
+        start_idx: usize,
+        end_idx: Option<usize>,
+    ) -> Block {
         let end = end_idx.unwrap_or(start_idx);
         Block {
             instruction: instruction,
+            arity: arity,
             start_idx: start_idx,
             end_idx: end,
         }
