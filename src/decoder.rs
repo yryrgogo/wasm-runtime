@@ -402,17 +402,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decode_header() {
+    fn can_decode_header() {
         let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+
+        assert_eq!(decoder.reader.buffer.len(), 8);
+
         decoder.decode_header();
+
+        assert_eq!(decoder.reader.pc, 8);
     }
 
     #[test]
     #[should_panic]
-    fn decode_header_failed() {
+    fn cannot_decode_header() {
         let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+
+        assert_eq!(decoder.reader.buffer.len(), 7);
         decoder.decode_header();
+    }
+
+    #[test]
+    fn can_read_unsigned_leb128() {
+        let wasm_module = vec![229, 142, 38, 0, 0, 0, 0, 0];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let [value, size] = decoder.reader.read_unsigned_leb128();
+
+        assert_eq!(value, 624485);
+        assert_eq!(size, 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn cannot_read_unsigned_leb128() {
+        let wasm_module = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_unsigned_leb128();
+    }
+
+    #[test]
+    fn can_read_signed_leb128() {
+        let wasm_module = vec![127, 0, 0, 0, 0, 0, 0, 0];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_signed_leb128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn cannot_read_signed_leb128() {
+        let wasm_module = vec![];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_signed_leb128();
     }
 }

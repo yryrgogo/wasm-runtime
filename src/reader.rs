@@ -8,7 +8,7 @@ pub const LEB128_MAX_BITS: usize = 32;
 
 pub struct WasmBinaryReader {
     pub buffer: Vec<u8>,
-    pc: usize,
+    pub pc: usize,
 }
 
 impl WasmBinaryReader {
@@ -74,14 +74,15 @@ impl WasmBinaryReader {
         [value, byte_count]
     }
 
-    fn read_signed_leb128(&mut self) -> [usize; 2] {
-        let mut value: usize = 0;
+    pub fn read_signed_leb128(&mut self) -> (isize, usize) {
+        let mut value: isize = 0;
         let mut shift: usize = 0;
         let mut byte_count: usize = 0;
 
         loop {
+            self.pc += 1;
             let first_byte = self.buffer[self.pc - 1..self.pc][0];
-            value |= ((first_byte & 0x7F) as usize) << shift;
+            value |= isize::from(first_byte & 0x7F) << shift;
             shift += 7;
             byte_count += 1;
 
@@ -95,6 +96,6 @@ impl WasmBinaryReader {
         if (value >> (shift - 1)) & 1 == 1 {
             value |= !0 << shift;
         }
-        [value, byte_count]
+        (value as isize, byte_count)
     }
 }
