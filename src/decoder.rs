@@ -215,6 +215,18 @@ impl Decoder {
         }
     }
 
+    /// Code Section
+    /// ```
+    /// [
+    ///   local variable and expression pair count,
+    ///   local variable and expression pair size,
+    ///   local variable count,
+    ///   local variable type count,
+    ///   local variable type,
+    ///   ...
+    ///   expressions...,
+    /// ]
+    /// ```
     fn decode_code_section(&mut self) {
         println!("#[Decode Code Section]");
 
@@ -463,7 +475,7 @@ mod leb_tests {
 }
 
 #[cfg(test)]
-mod tests {
+mod decode_tests {
     use super::*;
 
     #[test]
@@ -536,7 +548,6 @@ mod tests {
         ];
         let mut decoder = Decoder::new(None, Some(wasm_module_type_section)).unwrap();
 
-        // function_type を作るために、先に type section のデコードが必要
         decoder.decode_type_section();
         decoder.decode_function_section();
         decoder.decode_export_section();
@@ -547,6 +558,40 @@ mod tests {
                 export_map.function,
                 decoder.module.functions[export_map.index]
             );
+        }
+    }
+
+    #[test]
+    fn can_decode_code_section() {
+        let wasm_module_type_section = vec![
+            // Type Section
+            0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f, // Function Section
+            0x01, 0x00, // Export Section
+            0x01, 0x03, 0x66, 0x69, 0x62, 0x00, 0x00, // Code Section
+            0x01, 0x32, 0x01, 0x03, 0x7f, 0x20, 0x00, 0x41, 0x02, 0x4f, 0x04, 0x40, 0x20, 0x00,
+            0x41, 0x7f, 0x6a, 0x21, 0x01, 0x41, 0x01, 0x21, 0x00, 0x03, 0x40, 0x20, 0x00, 0x22,
+            0x03, 0x20, 0x02, 0x6a, 0x21, 0x00, 0x20, 0x03, 0x21, 0x02, 0x20, 0x01, 0x41, 0x7f,
+            0x6a, 0x22, 0x01, 0x0d, 0x00, 0x0b, 0x0b, 0x20, 0x00, 0x0b,
+        ];
+        let mut decoder = Decoder::new(None, Some(wasm_module_type_section)).unwrap();
+
+        decoder.decode_type_section();
+        decoder.decode_function_section();
+        decoder.decode_export_section();
+        decoder.decode_code_section();
+
+        assert_eq!(
+            decoder.module.functions[0].local_vars,
+            vec![NumberType::Int32; 3]
+        );
+
+        for (idx, block) in decoder.module.functions[0].clone().blocks {
+            match idx {
+                0 => assert_eq!(block, Block::new(2, vec![NumberType::Int32], 0, Some(46))),
+                5 => assert_eq!(block, Block::new(4, vec![], 5, Some(43))),
+                18 => assert_eq!(block, Block::new(3, vec![], 18, Some(42))),
+                _ => unreachable!("{}", idx),
+            }
         }
     }
 }

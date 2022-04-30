@@ -81,8 +81,8 @@ impl Block {
 
     pub fn inspect(&self) -> String {
         format!(
-            "#<Block instruction={}, start_idx={}, end_idx={}>",
-            self.instruction, self.start_idx, self.end_idx
+            "#<Block arity={:?} instruction={}, start_idx={}, end_idx={}>",
+            self.arity, self.instruction, self.start_idx, self.end_idx
         )
     }
 }
