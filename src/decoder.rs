@@ -92,30 +92,42 @@ impl Decoder {
         Ok(())
     }
 
+    /// Type Section
+    /// ```
+    /// [
+    ///  signature count,
+    ///  type section header,
+    ///  function parameter count,
+    ///  function parameter type,
+    ///  ...,
+    ///  return value count,
+    ///  return value type
+    /// ]
+    /// ```
     fn decode_type_section(&mut self) {
-        println!("Decode Type Section");
+        println!("#[Decode Type Section]");
 
         let [signature_count, size] = self.reader.read_unsigned_leb128();
         println!(
-            "Signature count: {} Decoded size: {}",
+            "  Signature count: {} Decoded size: {}",
             signature_count, size
         );
 
         TypeSection::validate_header(
             self.reader
                 .read_next_byte()
-                .unwrap_or_else(|| panic!("TypeSection のヘッダが見つかりません。")),
+                .unwrap_or_else(|| panic!("  TypeSection のヘッダが見つかりません。")),
         );
 
         for s_i in 0..signature_count {
-            println!("Signature {}", s_i + 1);
+            println!("  Signature {}", s_i + 1);
 
             let mut func_type = FunctionType::default();
 
             let [parameter_count, _] = self.reader.read_unsigned_leb128();
             for p_i in 0..parameter_count {
                 let num_type = self.decode_type().unwrap();
-                println!("Parameter {} Type {:?}", p_i + 1, num_type);
+                println!("  Parameter {} Type {:?}", p_i + 1, num_type);
                 func_type.parameters.push(num_type);
             }
 
@@ -126,18 +138,25 @@ impl Decoder {
 
             for r_i in 0..result_count {
                 let value = self.decode_type().unwrap();
-                println!("Result {} Type {:?}", r_i + 1, value);
+                println!("  Result {} Type {:?}", r_i + 1, value);
                 func_type.results.push(value);
             }
             self.module.function_types.push(func_type);
         }
     }
 
+    /// Function Section
+    /// ```
+    /// [
+    ///  function count,
+    ///  function type index,
+    /// ]
+    /// ```
     fn decode_function_section(&mut self) {
-        println!("Decode Function Section");
+        println!("#[Decode Function Section]");
 
         let [function_count, _] = self.reader.read_unsigned_leb128();
-        println!("Function count: {}", function_count);
+        println!("  Function count: {}", function_count);
 
         for i in 0..function_count {
             let [_, _] = self.reader.read_unsigned_leb128();
@@ -398,6 +417,45 @@ impl Decoder {
 }
 
 #[cfg(test)]
+mod leb_tests {
+    use super::*;
+
+    #[test]
+    fn can_read_unsigned_leb128() {
+        let wasm_module = vec![229, 142, 38, 0, 0, 0, 0, 0];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let [value, size] = decoder.reader.read_unsigned_leb128();
+
+        assert_eq!(value, 624485);
+        assert_eq!(size, 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn cannot_read_unsigned_leb128() {
+        let wasm_module = vec![];
+
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_unsigned_leb128();
+    }
+
+    #[test]
+    fn can_read_signed_leb128() {
+        let wasm_module = vec![127, 0, 0, 0, 0, 0, 0, 0];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_signed_leb128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn cannot_read_signed_leb128() {
+        let wasm_module = vec![];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.reader.read_signed_leb128();
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -424,35 +482,21 @@ mod tests {
     }
 
     #[test]
-    fn can_read_unsigned_leb128() {
-        let wasm_module = vec![229, 142, 38, 0, 0, 0, 0, 0];
+    fn can_decode_type_section() {
+        let wasm_module = vec![0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
-        let [value, size] = decoder.reader.read_unsigned_leb128();
 
-        assert_eq!(value, 624485);
-        assert_eq!(size, 3);
-    }
+        decoder.decode_type_section();
 
-    #[test]
-    #[should_panic]
-    fn cannot_read_unsigned_leb128() {
-        let wasm_module = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
-        decoder.reader.read_unsigned_leb128();
-    }
+        let func_type = decoder.module.function_types[0].clone();
 
-    #[test]
-    fn can_read_signed_leb128() {
-        let wasm_module = vec![127, 0, 0, 0, 0, 0, 0, 0];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
-        decoder.reader.read_signed_leb128();
-    }
-
-    #[test]
-    #[should_panic]
-    fn cannot_read_signed_leb128() {
-        let wasm_module = vec![];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
-        decoder.reader.read_signed_leb128();
+        assert_eq!(
+            func_type.parameters,
+            vec![NumberType::decode_type(0x7f).unwrap()]
+        );
+        assert_eq!(
+            func_type.results,
+            vec![NumberType::decode_type(0x7f).unwrap()]
+        );
     }
 }

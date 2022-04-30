@@ -17,7 +17,6 @@ impl WasmBinaryReader {
 
         if let Some(p) = path {
             let mut reader = BufReader::new(File::open(p)?);
-            let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer)?;
         } else {
             if let Some(module) = wasm_module {
