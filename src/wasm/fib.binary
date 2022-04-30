@@ -6,9 +6,9 @@
 005: 0
 006: 0
 007: 0
-008: 1
-009: 6
 // Type Section
+008: 1 // Section ID
+009: 6 // Section Size
 010: 1
 011: 60
 012: 1
@@ -16,12 +16,13 @@
 014: 1
 015: 7f
 // Function Section
-016: 3
-017: 2
+016: 3 // Section ID
+017: 2 // Section Size
 018: 1
 019: 0
-020: 7
-021: 7
+// Export Section
+020: 7 // Section ID
+021: 7 // Section Size
 022: 1
 023: 3
 024: 66
@@ -29,6 +30,7 @@
 026: 62
 027: 0
 028: 0
+//
 029: a
 030: 34
 031: 1

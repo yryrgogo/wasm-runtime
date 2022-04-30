@@ -73,7 +73,7 @@ impl Decoder {
             }
             SectionId::TypeSectionId => self.decode_type_section(),
             SectionId::FunctionSectionId => self.decode_function_section(),
-            SectionId::ExportSectionId => self.decode_export_section().unwrap(),
+            SectionId::ExportSectionId => self.decode_export_section(),
             SectionId::CodeSectionId => self.decode_code_section(),
         }
 
@@ -100,7 +100,6 @@ impl Decoder {
     ///  function parameter count,
     ///  function parameter type,
     ///  ...,
-    ///  return value count,
     ///  return value type
     /// ]
     /// ```
@@ -167,7 +166,16 @@ impl Decoder {
         }
     }
 
-    fn decode_export_section(&mut self) -> Result<(), Box<dyn Error>> {
+    /// Export Section
+    /// ```
+    /// [
+    ///  export count,
+    ///  export name size,
+    ///  export desc （Export される値のタイプ）,
+    ///  export desc index （Export される値のインデックス。Function の場合は Function の index）
+    /// ]
+    /// ```
+    fn decode_export_section(&mut self) {
         println!("Decode Export Section");
 
         let [export_count, _] = self.reader.read_unsigned_leb128();
@@ -205,8 +213,6 @@ impl Decoder {
                 ExportDesc::GlobalVariable => todo!(),
             }
         }
-
-        Ok(())
     }
 
     fn decode_code_section(&mut self) {
@@ -461,8 +467,8 @@ mod tests {
 
     #[test]
     fn can_decode_header() {
-        let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let wasm_module_header = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
+        let mut decoder = Decoder::new(None, Some(wasm_module_header)).unwrap();
 
         assert_eq!(decoder.reader.buffer.len(), 8);
 
@@ -474,8 +480,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn cannot_decode_header() {
-        let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let wasm_module_header = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00];
+        let mut decoder = Decoder::new(None, Some(wasm_module_header)).unwrap();
 
         assert_eq!(decoder.reader.buffer.len(), 7);
         decoder.decode_header();
@@ -483,8 +489,8 @@ mod tests {
 
     #[test]
     fn can_decode_type_section() {
-        let wasm_module = vec![0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f];
-        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let wasm_module_type_section = vec![0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f];
+        let mut decoder = Decoder::new(None, Some(wasm_module_type_section)).unwrap();
 
         decoder.decode_type_section();
 
@@ -498,5 +504,48 @@ mod tests {
             func_type.results,
             vec![NumberType::decode_type(0x7f).unwrap()]
         );
+    }
+
+    #[test]
+    fn can_decode_function_section() {
+        let wasm_module_type_section = vec![
+            // Type Section
+            0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f, // Function Section
+            0x01, 0x00,
+        ];
+        let mut decoder = Decoder::new(None, Some(wasm_module_type_section)).unwrap();
+
+        // function_type を作るために、先に type section のデコードが必要
+        decoder.decode_type_section();
+        decoder.decode_function_section();
+
+        for (i, function) in decoder.module.functions.iter().enumerate() {
+            let func_type = decoder.module.function_types[i].clone();
+            assert_eq!(function, &Function::new(func_type, Some(i)));
+        }
+    }
+
+    #[test]
+    fn can_decode_export_section() {
+        let wasm_module_type_section = vec![
+            // Type Section
+            0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f, // Function Section
+            0x01, 0x00, // Export Section
+            0x01, 0x03, 0x66, 0x69, 0x62, 0x00, 0x00,
+        ];
+        let mut decoder = Decoder::new(None, Some(wasm_module_type_section)).unwrap();
+
+        // function_type を作るために、先に type section のデコードが必要
+        decoder.decode_type_section();
+        decoder.decode_function_section();
+        decoder.decode_export_section();
+
+        for (key, export_map) in decoder.module.exported {
+            assert_eq!(key, "fib");
+            assert_eq!(
+                export_map.function,
+                decoder.module.functions[export_map.index]
+            );
+        }
     }
 }
