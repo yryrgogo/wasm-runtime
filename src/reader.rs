@@ -12,10 +12,21 @@ pub struct WasmBinaryReader {
 }
 
 impl WasmBinaryReader {
-    pub fn new(path: &str) -> Result<Self, Box<dyn Error>> {
-        let mut reader = BufReader::new(File::open(path)?);
+    pub fn new(path: Option<&str>, wasm_module: Option<Vec<u8>>) -> Result<Self, Box<dyn Error>> {
         let mut buffer = Vec::new();
-        reader.read_to_end(&mut buffer)?;
+
+        if let Some(p) = path {
+            let mut reader = BufReader::new(File::open(p)?);
+            let mut buffer = Vec::new();
+            reader.read_to_end(&mut buffer)?;
+        } else {
+            if let Some(module) = wasm_module {
+                buffer = module;
+            } else {
+                panic!("Wasm モジュールを渡してください。")
+            }
+        }
+
         Ok(WasmBinaryReader {
             buffer: buffer,
             pc: 0,

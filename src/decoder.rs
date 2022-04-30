@@ -18,10 +18,13 @@ pub struct Decoder {
 }
 
 impl Decoder {
-    pub fn new(path: &str) -> Result<Decoder, Box<dyn Error>> {
+    pub fn new(
+        path: Option<&str>,
+        wasm_module: Option<Vec<u8>>,
+    ) -> Result<Decoder, Box<dyn Error>> {
         Ok(Decoder {
             module: Module::default(),
-            reader: WasmBinaryReader::new(path)?,
+            reader: WasmBinaryReader::new(path, wasm_module)?,
         })
     }
 
@@ -408,17 +411,14 @@ impl Decoder {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn is_true_validate_header() {
-//         let path = "src/wasm/fib.wasm";
-//         let mut reader = WasmBinaryReader::new(path)
-//             .unwrap_or_else(|_| panic!("wasm ファイルの読み込みに失敗しました。"));
+    #[test]
+    fn is_true_validate_header() {
+        let wasm_module = vec![];
 
-//         let mut decoder = Decoder::new(&mut reader).unwrap();
-//         decoder.validate_header();
-//     }
-// }
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+    }
+}
