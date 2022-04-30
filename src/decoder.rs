@@ -95,9 +95,7 @@ impl Decoder {
     fn decode_type_section(&mut self) {
         println!("Decode Type Section");
 
-        let mut pc = 0;
         let [signature_count, size] = self.reader.read_unsigned_leb128();
-        pc += size;
         println!(
             "Signature count: {} Decoded size: {}",
             signature_count, size
@@ -108,23 +106,20 @@ impl Decoder {
                 .read_next_byte()
                 .unwrap_or_else(|| panic!("TypeSection のヘッダが見つかりません。")),
         );
-        pc += 1;
 
         for s_i in 0..signature_count {
             println!("Signature {}", s_i + 1);
 
             let mut func_type = FunctionType::default();
 
-            let [parameter_count, size] = self.reader.read_unsigned_leb128();
-            pc += size;
+            let [parameter_count, _] = self.reader.read_unsigned_leb128();
             for p_i in 0..parameter_count {
                 let num_type = self.decode_type().unwrap();
                 println!("Parameter {} Type {:?}", p_i + 1, num_type);
                 func_type.parameters.push(num_type);
             }
 
-            let [result_count, size] = self.reader.read_unsigned_leb128();
-            pc += size;
+            let [result_count, _] = self.reader.read_unsigned_leb128();
 
             // NOTE: 202203時点の仕様では戻り値は1つまで
             assert_eq!(result_count, 1);
@@ -141,14 +136,11 @@ impl Decoder {
     fn decode_function_section(&mut self) {
         println!("Decode Function Section");
 
-        let mut pc = 0;
-        let [function_count, size] = self.reader.read_unsigned_leb128();
-        pc += size;
+        let [function_count, _] = self.reader.read_unsigned_leb128();
         println!("Function count: {}", function_count);
 
         for i in 0..function_count {
-            let [_, size] = self.reader.read_unsigned_leb128();
-            pc += size;
+            let [_, _] = self.reader.read_unsigned_leb128();
             let func_type = self.module.function_types[i].clone();
             self.module
                 .functions
@@ -159,9 +151,7 @@ impl Decoder {
     fn decode_export_section(&mut self) -> Result<(), Box<dyn Error>> {
         println!("Decode Export Section");
 
-        let mut pc = 0;
-        let [export_count, size] = self.reader.read_unsigned_leb128();
-        pc += size;
+        let [export_count, _] = self.reader.read_unsigned_leb128();
 
         println!("Export count: {}", export_count);
         for _ in 0..export_count {
@@ -203,7 +193,6 @@ impl Decoder {
     fn decode_code_section(&mut self) {
         println!("Decode Code Section");
 
-        let mut pc = 0;
         let [func_body_count, _] = self.reader.read_unsigned_leb128();
         println!("func_body Count: {}", func_body_count);
 
@@ -215,14 +204,11 @@ impl Decoder {
     fn decode_code_section_body(&mut self, func_idx: usize) {
         println!("# func_body {}", func_idx);
 
-        let mut pc = 0;
-        let [func_body_size, size] = self.reader.read_unsigned_leb128();
-        pc += size;
+        let [func_body_size, _] = self.reader.read_unsigned_leb128();
         println!("# func_body size: {}", func_body_size);
 
         let mut local_var_byte_size: usize = 0;
         let [local_var_count, size] = self.reader.read_unsigned_leb128();
-        pc += size;
         local_var_byte_size += size;
         println!("# Local Var Count: {}", local_var_count);
 
@@ -418,6 +404,14 @@ mod tests {
     #[test]
     fn decode_header() {
         let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.decode_header();
+    }
+
+    #[test]
+    #[should_panic]
+    fn decode_header_failed() {
+        let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
         decoder.decode_header();
     }
