@@ -20,7 +20,7 @@ impl NumberType {
             0x7C => Some(NumberType::Float64),
             // _ => panic!("Invalid ValueType {:x}", byte),
             _ => {
-                println!("Invalid ValueType {:x}", byte);
+                println!("  Invalid ValueType {:x}", byte);
                 Some(NumberType::Int32)
             }
         }

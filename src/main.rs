@@ -22,10 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     decoder.inspect();
 
     // println!("Rest binary");
-    // for i in 0..40 {
-    //     let mut buf = [0; 1];
-    //     decoder.reader.read_exact(&mut buf).unwrap();
-    //     println!("{:03}: {:x}", i, buf[0]);
+    // for i in 0..119 {
+    //     let byte = decoder.reader.read_next_byte().unwrap();
+    //     println!("{:03}: {:x}", i, byte);
     // }
 
     // let mut eval = Evaluator::new(decoder.module);

@@ -216,38 +216,38 @@ impl Decoder {
     }
 
     fn decode_code_section(&mut self) {
-        println!("Decode Code Section");
+        println!("#[Decode Code Section]");
 
-        let [func_body_count, _] = self.reader.read_unsigned_leb128();
-        println!("func_body Count: {}", func_body_count);
+        let [code_count, _] = self.reader.read_unsigned_leb128();
+        println!("  Function body count: {}", code_count);
 
-        for func_idx in 0..func_body_count {
-            self.decode_code_section_body(func_idx)
+        for code_idx in 0..code_count {
+            self.decode_code_section_body(code_idx)
         }
     }
 
-    fn decode_code_section_body(&mut self, func_idx: usize) {
-        println!("# func_body {}", func_idx);
+    fn decode_code_section_body(&mut self, code_idx: usize) {
+        println!("  Code index {}", code_idx);
 
-        let [func_body_size, _] = self.reader.read_unsigned_leb128();
-        println!("# func_body size: {}", func_body_size);
+        let [code_size, _] = self.reader.read_unsigned_leb128();
+        println!("  Code size: {}", code_size);
 
         let mut local_var_byte_size: usize = 0;
         let [local_var_count, size] = self.reader.read_unsigned_leb128();
         local_var_byte_size += size;
-        println!("# Local Var Count: {}", local_var_count);
+        println!("  local var count: {}", local_var_count);
 
         for _ in 0..local_var_count {
-            let local_var_type_count_byte_size = self.decode_code_section_body_local_var(func_idx);
+            let local_var_type_count_byte_size = self.decode_code_section_body_local_var(code_idx);
             local_var_byte_size += local_var_type_count_byte_size;
             local_var_byte_size += 1;
         }
-        let expression_buf = self.reader.read_bytes(func_body_size - local_var_byte_size);
-        self.module.functions[func_idx].expressions = expression_buf.to_vec();
+        let expression_buf = self.reader.read_bytes(code_size - local_var_byte_size);
+        self.module.functions[code_idx].expressions = expression_buf.to_vec();
 
-        println!("{}", self.module.functions[func_idx].inspect());
+        println!("{}", self.module.functions[code_idx].inspect());
 
-        self.decode_code_section_body_block(func_idx);
+        self.decode_code_section_body_block(code_idx);
     }
 
     fn decode_code_section_body_local_var(&mut self, func_idx: usize) -> usize {
@@ -255,7 +255,7 @@ impl Decoder {
             self.reader.read_unsigned_leb128();
         let local_var_type = self.decode_type().unwrap();
         println!(
-            "Local Var Type: {} Count: {:x}",
+            "  local var type: {} count: {:x}",
             local_var_type.inspect(),
             local_var_type_count
         );
@@ -267,7 +267,6 @@ impl Decoder {
     fn decode_code_section_body_block(&mut self, func_idx: usize) {
         let mut expressions = self.module.functions[func_idx].expressions.clone();
         let mut blocks: HashMap<usize, Block> = HashMap::new();
-
         let mut block_stack = vec![Block::new(
             2,
             self.module.function_types[func_idx].results.clone(),
@@ -280,10 +279,11 @@ impl Decoder {
             if expressions.len() == 0 {
                 break;
             }
-            match self.read_next_structured_instruction(&mut expressions) {
+            match self.find_next_structured_instruction(&mut expressions) {
                 Some(structured_instruction) => {
-                    let idx = self.module.functions[func_idx].expressions.len() - expressions.len();
-                    println!("idx:{}", idx);
+                    let idx =
+                        self.module.functions[func_idx].expressions.len() - expressions.len() - 1;
+                    println!("  Expression idx:{}", idx);
                     match OpCode::from_byte(structured_instruction) {
                         OpCode::End => {
                             let mut block = block_stack.pop().unwrap();
@@ -291,7 +291,8 @@ impl Decoder {
                             blocks.insert(block.start_idx, block);
                         }
                         op => {
-                            let opcode = self.reader.read_next_byte().unwrap_or_else(|| {
+                            println!("  Structured Instruction OpCode: {:?}", op);
+                            let opcode = expressions.pop().unwrap_or_else(|| {
                                 panic!("Block Section の arity 読み込みに失敗しました。")
                             });
                             let arity: Vec<NumberType> = if opcode == 0x40 {
@@ -302,7 +303,7 @@ impl Decoder {
                                 });
                                 vec![v]
                             };
-                            println!("[Structured Instruction] {:?} arity: {:?}", op, arity);
+                            println!("  [Structured Instruction] {:?} arity: {:?}", op, arity);
                             let block = Block::new(structured_instruction, arity, idx, None);
                             block_stack.push(block);
                         }
@@ -323,7 +324,7 @@ impl Decoder {
         NumberType::decode_type(byte)
     }
 
-    fn read_next_structured_instruction(&mut self, expression: &mut Vec<u8>) -> Option<u8> {
+    fn find_next_structured_instruction(&mut self, expression: &mut Vec<u8>) -> Option<u8> {
         let mut byte;
         loop {
             if expression.len() == 0 {
@@ -344,11 +345,11 @@ impl Decoder {
                 | OpCode::TeeLocal
                 | OpCode::GetGlobal
                 | OpCode::SetGlobal => {
-                    // println!("get/set local/global");
+                    println!("  OpCode: {:x} get/set local/global", byte);
                     Decoder::decode_unsigned_leb128(expression);
                 }
                 OpCode::I32Const | OpCode::I64Const | OpCode::F32Const | OpCode::F64Const => {
-                    // println!("constants");
+                    println!("  OpCode: {:x} Const", byte);
                     Decoder::decode_signed_leb128(expression);
                 }
                 _ => {}
@@ -366,13 +367,13 @@ impl Decoder {
         Ok(())
     }
 
-    fn decode_unsigned_leb128(buf: &[u8]) -> [usize; 2] {
+    fn decode_unsigned_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
         let mut value: usize = 0;
         let mut shift: usize = 0;
         let mut byte_count: usize = 0;
 
         loop {
-            let byte = buf[0];
+            let byte = buf.pop().unwrap();
             byte_count += 1;
             value |= ((byte & 0x7F) as usize) << shift;
             shift += 7;
@@ -387,13 +388,13 @@ impl Decoder {
         [value, byte_count]
     }
 
-    fn decode_signed_leb128(buf: &[u8]) -> [usize; 2] {
+    fn decode_signed_leb128(buf: &mut Vec<u8>) -> [usize; 2] {
         let mut value: usize = 0;
         let mut shift: usize = 0;
         let mut byte_count: usize = 0;
 
         loop {
-            let byte = buf[0];
+            let byte = buf.pop().unwrap();
             byte_count += 1;
             value |= ((byte & 0x7F) as usize) << shift;
             shift += 7;
