@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Main
 
     let path = "src/wasm/fib.wasm";
-    let mut decoder = Decoder::new(path).unwrap();
+    let mut decoder = Decoder::new(Some(path), None).unwrap();
 
     decoder.run();
     decoder.inspect();

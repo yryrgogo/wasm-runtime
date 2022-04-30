@@ -416,9 +416,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn is_true_validate_header() {
-        let wasm_module = vec![];
-
+    fn decode_header() {
+        let wasm_module = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        decoder.decode_header();
     }
 }
