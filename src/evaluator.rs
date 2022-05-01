@@ -67,6 +67,7 @@ impl Evaluator {
                 0x02 => self.operate_block(frame),
                 0x03 => self.operate_block(frame),
                 0x04 => self.operate_if(frame),
+                0x0b => self.operate_end(frame),
                 0x0c => self.operate_br(frame),
                 0x0d => self.operate_br_if(frame),
                 0x20 => self.operate_local_get(frame),
@@ -77,8 +78,8 @@ impl Evaluator {
                 0x4f => self.operate_i32_ge_u(),
                 0x6A => self.operate_i32_add(),
                 opcode => {
-                    // println!("[execute] {:?}", frame);
-                    println!("[execute] {}", self.stack.inspect());
+                    println!("[execute] {:#?}", frame);
+                    // println!("[execute] {}", self.stack.inspect());
                     println!("[execute] opcode: {:x}", opcode);
                     todo!();
                 }
@@ -123,6 +124,25 @@ impl Evaluator {
         println!("[if] {:?}", num);
     }
 
+    // 0x0b
+    fn operate_end(&mut self, frame: &Frame) {
+        let counter = frame.get_counter();
+        let last_idx = frame.function.expressions.len() - 1;
+        println!("counter: {} last_idx: {}", counter, last_idx);
+        if counter != last_idx {
+            self.stack.pop_last_label();
+            return;
+        }
+
+        let result = self.stack.pop_value();
+        if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
+            self.stack.pop_current_frame();
+            self.stack.push_values(result);
+        } else {
+            unreachable!("#[operate_end] Stack top が Frame ではありません。")
+        };
+    }
+
     // 0x0c
     fn operate_br(&mut self, frame: &mut Frame) {
         let label_idx = self.read_u_leb128(frame);
@@ -134,6 +154,9 @@ impl Evaluator {
             result = self.stack.pop_value();
             println!("# [operate_br result] {:?}", result);
         }
+
+        self.stack
+            .pop_all_from_label(self.stack.label_position(label_idx));
         if label.instruction == 0x03 {
             frame.set_counter(label.start_idx);
         } else {

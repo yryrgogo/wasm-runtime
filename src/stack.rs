@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use crate::instructions::Instructions;
 use crate::module::function::Block;
 use crate::module::number::{
@@ -76,6 +74,27 @@ impl Stack {
         }
     }
 
+    pub fn pop_all_from_label(&mut self, label_idx: usize) {
+        self.stack = self.stack[0..label_idx].to_vec();
+        self.label_positions = self.label_positions[0..self.label_positions.len() - 1].to_vec();
+    }
+
+    pub fn pop_last_label(&mut self) {
+        let label_idx = *self
+            .label_positions
+            .last()
+            .unwrap_or_else(|| panic!("label_positions に値が存在しません"));
+        self.stack.swap_remove(label_idx);
+    }
+
+    pub fn pop_current_frame(&mut self) {
+        let frame_idx = *self
+            .frame_positions
+            .last()
+            .unwrap_or_else(|| panic!("frame_positions に値が存在しません"));
+        self.stack = self.stack[0..frame_idx].to_vec();
+    }
+
     pub fn peek(&self) -> Number {
         let instruction = self.stack.last().unwrap();
         if let Instructions::Number(v) = instruction {
@@ -114,15 +133,17 @@ impl Stack {
         }
     }
 
+    pub fn label_position(&self, label_idx: usize) -> usize {
+        self.label_positions[self.label_positions.len() - label_idx - 1]
+    }
+
     pub fn get_label(&self, label_idx: usize) -> Block {
-        let mut reversed_label_positions = self.label_positions.clone();
-        reversed_label_positions.reverse();
-        let label =
-            if let Instructions::Block(block) = &self.stack[reversed_label_positions[label_idx]] {
-                block
-            } else {
-                unreachable!()
-            };
+        let label = if let Instructions::Block(block) = &self.stack[self.label_position(label_idx)]
+        {
+            block
+        } else {
+            unreachable!()
+        };
         label.clone()
     }
 

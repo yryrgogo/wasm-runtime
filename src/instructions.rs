@@ -3,7 +3,7 @@ use crate::{
     structure::frame::Frame,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instructions {
     Frame(Frame),
     Number(Number),
