@@ -33,6 +33,9 @@ impl Evaluator {
                 None => break,
             }
         }
+
+        let result = self.stack.pop_value();
+        println!("#[invoke] Result: {:#?}", result);
     }
 
     fn call(&mut self, func_idx: usize) {
@@ -64,25 +67,26 @@ impl Evaluator {
     fn execute(&mut self, frame: &mut Frame) {
         loop {
             match self.stack.next_opcode(frame) {
-                0x02 => self.operate_block(frame),
-                0x03 => self.operate_block(frame),
-                0x04 => self.operate_if(frame),
-                0x0b => self.operate_end(frame),
-                0x0c => self.operate_br(frame),
-                0x0d => self.operate_br_if(frame),
-                0x20 => self.operate_local_get(frame),
-                0x21 => self.operate_local_set(frame),
-                0x22 => self.operate_local_tee(frame),
-                0x40 => self.operate_grow_memory(frame),
-                0x41 => self.operate_i32_const(frame),
-                0x4f => self.operate_i32_ge_u(),
-                0x6A => self.operate_i32_add(),
-                opcode => {
+                Some(0x02) => self.operate_block(frame),
+                Some(0x03) => self.operate_block(frame),
+                Some(0x04) => self.operate_if(frame),
+                Some(0x0b) => self.operate_end(frame),
+                Some(0x0c) => self.operate_br(frame),
+                Some(0x0d) => self.operate_br_if(frame),
+                Some(0x20) => self.operate_local_get(frame),
+                Some(0x21) => self.operate_local_set(frame),
+                Some(0x22) => self.operate_local_tee(frame),
+                Some(0x40) => self.operate_grow_memory(frame),
+                Some(0x41) => self.operate_i32_const(frame),
+                Some(0x4f) => self.operate_i32_ge_u(),
+                Some(0x6A) => self.operate_i32_add(),
+                Some(opcode) => {
                     println!("[execute] {:#?}", frame);
                     // println!("[execute] {}", self.stack.inspect());
                     println!("[execute] opcode: {:x}", opcode);
                     todo!();
                 }
+                None => break,
             }
         }
     }
@@ -127,7 +131,7 @@ impl Evaluator {
     // 0x0b
     fn operate_end(&mut self, frame: &Frame) {
         let counter = frame.get_counter();
-        let last_idx = frame.function.expressions.len() - 1;
+        let last_idx = frame.function.expressions.len();
         println!("counter: {} last_idx: {}", counter, last_idx);
         if counter != last_idx {
             self.stack.pop_last_label();
@@ -135,12 +139,15 @@ impl Evaluator {
         }
 
         let result = self.stack.pop_value();
+        println!("#[operate_end] Result: {:#?}", result);
         if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
             self.stack.pop_current_frame();
             self.stack.push_values(result);
         } else {
             unreachable!("#[operate_end] Stack top が Frame ではありません。")
         };
+
+        println!("[operate_end] End");
     }
 
     // 0x0c

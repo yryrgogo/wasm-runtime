@@ -80,17 +80,17 @@ impl Stack {
     }
 
     pub fn pop_last_label(&mut self) {
-        let label_idx = *self
+        let label_idx = self
             .label_positions
-            .last()
+            .pop()
             .unwrap_or_else(|| panic!("label_positions に値が存在しません"));
         self.stack.swap_remove(label_idx);
     }
 
     pub fn pop_current_frame(&mut self) {
-        let frame_idx = *self
+        let frame_idx = self
             .frame_positions
-            .last()
+            .pop()
             .unwrap_or_else(|| panic!("frame_positions に値が存在しません"));
         self.stack = self.stack[0..frame_idx].to_vec();
     }
@@ -104,13 +104,16 @@ impl Stack {
         }
     }
 
-    pub fn next_opcode(&mut self, frame: &mut Frame) -> u8 {
+    pub fn next_opcode(&mut self, frame: &mut Frame) -> Option<u8> {
         let counter = frame.get_counter();
         frame.increment_counter(1);
 
-        let opcode = frame.function.expressions.get(counter).unwrap();
-        println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
-        *opcode
+        if let Some(opcode) = frame.function.expressions.get(counter) {
+            println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
+            Some(*opcode)
+        } else {
+            None
+        }
     }
 
     pub fn current_frame(&self) -> Option<Frame> {
