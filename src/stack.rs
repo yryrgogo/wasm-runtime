@@ -109,7 +109,7 @@ impl Stack {
         frame.increment_counter(1);
 
         if let Some(opcode) = frame.function.expressions.get(counter) {
-            println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
+            // println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
             Some(*opcode)
         } else {
             None

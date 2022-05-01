@@ -38,15 +38,4 @@ impl Frame {
     pub fn increment_counter(&mut self, n: usize) {
         self.counter += n;
     }
-
-    pub fn inspect(&self) -> String {
-        format!(
-            "#<Frame local={}>",
-            self.local_vars
-                .iter()
-                .map(|x| format!("{}", x.inspect()))
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
-    }
 }

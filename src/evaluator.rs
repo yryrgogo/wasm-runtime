@@ -76,15 +76,12 @@ impl Evaluator {
                 Some(0x20) => self.operate_local_get(frame),
                 Some(0x21) => self.operate_local_set(frame),
                 Some(0x22) => self.operate_local_tee(frame),
-                Some(0x40) => self.operate_grow_memory(frame),
+                Some(0x40) => self.operate_grow_memory(),
                 Some(0x41) => self.operate_i32_const(frame),
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
                 Some(opcode) => {
-                    println!("[execute] {:#?}", frame);
-                    // println!("[execute] {}", self.stack.inspect());
-                    println!("[execute] opcode: {:x}", opcode);
-                    todo!();
+                    todo!("#[execute] opcode: {:x}", opcode);
                 }
                 None => break,
             }
@@ -132,7 +129,6 @@ impl Evaluator {
     fn operate_end(&mut self, frame: &Frame) {
         let counter = frame.get_counter();
         let last_idx = frame.function.expressions.len();
-        println!("counter: {} last_idx: {}", counter, last_idx);
         if counter != last_idx {
             self.stack.pop_last_label();
             return;
@@ -155,11 +151,9 @@ impl Evaluator {
         let label_idx = self.read_u_leb128(frame);
         let label = self.stack.get_label(label_idx);
 
-        println!("# [operate_br Label] {:?}", label);
-        let result: Number;
+        let mut result: Option<Number> = None;
         if label.arity.len() != 0 {
-            result = self.stack.pop_value();
-            println!("# [operate_br result] {:?}", result);
+            result = Some(self.stack.pop_value());
         }
 
         self.stack
@@ -168,6 +162,10 @@ impl Evaluator {
             frame.set_counter(label.start_idx);
         } else {
             frame.set_counter(label.end_idx + 1);
+        }
+
+        if let Some(num) = result {
+            self.stack.push_values(num);
         }
     }
 
@@ -209,10 +207,11 @@ impl Evaluator {
     }
 
     // 0x40
-    fn operate_grow_memory(&mut self, frame: &mut Frame) {
-        let size = self.read_u_leb128(frame);
+    fn operate_grow_memory(&mut self) {
+        todo!("");
+        // let size = self.read_u_leb128(frame);
         // TODO:
-        println!("# [operate_grow_memory]grow {} memory", size)
+        // println!("# [operate_grow_memory]grow {} memory", size)
     }
 
     // 0x41

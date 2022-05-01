@@ -372,10 +372,11 @@ impl Decoder {
     }
 
     fn discard_section(&mut self, size: usize) -> Result<(), Box<dyn Error>> {
-        let bytes = self.reader.read_bytes(size);
-        for b in bytes.clone() {
-            println!("section byte: {}", b);
-        }
+        self.reader.read_bytes(size);
+        // let bytes = self.reader.read_bytes(size);
+        // for b in bytes.clone() {
+        //     println!("section byte: {}", b);
+        // }
         Ok(())
     }
 
