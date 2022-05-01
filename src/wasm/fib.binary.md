@@ -31,20 +31,20 @@
 027: 0
 028: 0
 // Code Section
-029: a  // Section ID
+029: a // Section ID
 030: 34 // Section Size
-031: 1  // Local Variable and Expression Pair Count
+031: 1 // Local Variable and Expression Pair Count
 032: 32 // Local Variable and Expression Pair Size
-033: 1  // Local Variable Count
-034: 3  // Local Variable Type Count
+033: 1 // Local Variable Count
+034: 3 // Local Variable Type Count
 035: 7f // Local Variable Type
 // Code Section Expression
 036: 20 // Get Local
-037: 0  // Local Variable Index?
+037: 0 // Local Variable Index?
 038: 41 // I32 Const
-039: 2  // Signed LEB128
+039: 2 // Signed LEB128
 040: 4f // i32.ge_u
-041: 4  // IF
+041: 4 // IF
 042: 40 // arity
 043: 20
 044: 0
@@ -57,7 +57,7 @@
 051: 1
 052: 21
 053: 0
-054: 3  // Loop
+054: 3 // Loop
 055: 40 // arity
 056: 20
 057: 0
