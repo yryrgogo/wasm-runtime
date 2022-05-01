@@ -67,6 +67,7 @@ impl Evaluator {
                 0x02 => self.operate_block(frame),
                 0x03 => self.operate_block(frame),
                 0x04 => self.operate_if(frame),
+                0x0d => self.operate_br_if(frame),
                 0x20 => self.operate_local_get(frame),
                 0x21 => self.operate_local_set(frame),
                 0x22 => self.operate_local_tee(frame),
@@ -86,16 +87,18 @@ impl Evaluator {
 
     // 0x02
     fn operate_block(&mut self, frame: &mut Frame) {
-        let block_start_counter = frame.get_counter();
+        let block_start_counter = frame.get_counter() - 1;
 
         let label = (*frame
             .function
             .blocks
             .get(&block_start_counter)
-            .unwrap_or_else(|| panic!("")))
+            .unwrap_or_else(|| panic!("# [operate_block Label の取得に失敗しました。]")))
         .clone();
-        frame.set_counter(label.start_idx + 1);
-        println!("[operate_block] label {:?}", label);
+
+        // start_idx は 0x02 オペコードを指しており、次は arity のため2つ飛ばす
+        frame.set_counter(label.start_idx + 2);
+        println!("# [operate_block] label {:?}", label);
         self.stack.push_label(label);
     }
 
@@ -103,13 +106,14 @@ impl Evaluator {
     fn operate_if(&mut self, frame: &mut Frame) {
         let num = self.stack.pop_value();
         if num.value.i32() == 0 {
-            let block_start_counter = frame.get_counter();
+            let block_start_counter = frame.get_counter() - 1;
             let label = (*frame
                 .function
                 .blocks
                 .get(&block_start_counter)
-                .unwrap_or_else(|| panic!("[operate_if] Label の取得に失敗しました。")))
+                .unwrap_or_else(|| panic!("# [operate_if] Label の取得に失敗しました。")))
             .clone();
+
             frame.set_counter(label.end_idx + 1);
         } else {
             self.operate_block(frame);
@@ -118,6 +122,37 @@ impl Evaluator {
         println!("[if] {:?}", num);
     }
 
+    // 0x0c
+    fn operate_br(&mut self, frame: &mut Frame) {
+        let label_idx = self.read_u_leb128(frame);
+        let label = (*frame
+            .function
+            .blocks
+            .get(&label_idx)
+            .unwrap_or_else(|| panic!("# [operate_br] Label の取得に失敗しました。")))
+        .clone();
+        println!("# [operate_br] {:?}", label);
+
+        let result = self.stack.pop_value();
+        println!("# [operate_br] {:?}", result);
+
+        if label.instruction == 0x03 {
+            frame.set_counter(label.start_idx);
+        } else {
+            frame.set_counter(label.end_idx + 1);
+        }
+    }
+
+    // 0x0d
+    fn operate_br_if(&mut self, frame: &mut Frame) {
+        if self.stack.pop_value().value.i32() == 0 {
+            self.read_u_leb128(frame);
+        } else {
+            self.operate_br(frame);
+        }
+    }
+
+    // 0x20
     fn operate_local_get(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         let local_var = frame.reference_local_var(local_idx as usize);
@@ -127,6 +162,7 @@ impl Evaluator {
         self.stack.push_values(local_var);
     }
 
+    // 0x21
     fn operate_local_set(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.pop_value();
@@ -134,6 +170,7 @@ impl Evaluator {
         println!("[local_set] {:?}", frame.local_vars[local_idx]);
     }
 
+    // 0x22
     fn operate_local_tee(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
         frame.local_vars[local_idx] = self.stack.peek();
@@ -145,7 +182,7 @@ impl Evaluator {
     fn operate_grow_memory(&mut self, frame: &mut Frame) {
         let size = self.read_u_leb128(frame);
         // TODO:
-        println!("[operate_grow_memory]grow {} memory", size)
+        println!("# [operate_grow_memory]grow {} memory", size)
     }
 
     // 0x41
