@@ -17,7 +17,7 @@ impl Evaluator {
         }
     }
 
-    pub fn invoke(&mut self, func_name: String, args: Vec<Number>) {
+    pub fn invoke(&mut self, func_name: String, args: Vec<Number>) -> Number {
         for num in args {
             self.stack.push_values(num);
         }
@@ -34,8 +34,7 @@ impl Evaluator {
             }
         }
 
-        let result = self.stack.pop_value();
-        println!("#[invoke] Result: {:#?}", result);
+        self.stack.pop_value()
     }
 
     fn call(&mut self, func_idx: usize) {
@@ -264,5 +263,34 @@ impl Evaluator {
             }
             Err(_) => panic!("signed leb128 の decode に失敗しました。"),
         }
+    }
+}
+
+#[cfg(test)]
+mod evaluator_tests {
+    use crate::decoder::Decoder;
+
+    use super::*;
+
+    #[test]
+    fn can_evaluate_fibonacci() {
+        let path = "src/wasm/fib.wasm";
+        let mut decoder = Decoder::new(Some(path), None).unwrap();
+
+        decoder.run();
+        decoder.inspect();
+
+        let mut eval = Evaluator::new(decoder.module);
+
+        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(3))]);
+        assert_eq!(result.value.i32(), 2);
+        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(5))]);
+        assert_eq!(result.value.i32(), 5);
+        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(8))]);
+        assert_eq!(result.value.i32(), 21);
+        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(10))]);
+        assert_eq!(result.value.i32(), 55);
+        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(20))]);
+        assert_eq!(result.value.i32(), 6765);
     }
 }
