@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::instructions::Instructions;
 use crate::module::function::Block;
 use crate::module::number::{
@@ -112,7 +114,26 @@ impl Stack {
         }
     }
 
+    pub fn get_label(&self, label_idx: usize) -> Block {
+        let mut reversed_label_positions = self.label_positions.clone();
+        reversed_label_positions.reverse();
+        let label =
+            if let Instructions::Block(block) = &self.stack[reversed_label_positions[label_idx]] {
+                block
+            } else {
+                unreachable!()
+            };
+        label.clone()
+    }
+
     pub fn inspect(&self) -> String {
-        format!("Stack size: {}\n{:?}", self.stack.len(), self.stack)
+        format!(
+            "Stack size: {}
+#Stack<\n
+stack: Vec<Instructions> {:#?}\n
+>",
+            self.stack.len(),
+            self.stack
+        )
     }
 }

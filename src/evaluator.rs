@@ -67,6 +67,7 @@ impl Evaluator {
                 0x02 => self.operate_block(frame),
                 0x03 => self.operate_block(frame),
                 0x04 => self.operate_if(frame),
+                0x0c => self.operate_br(frame),
                 0x0d => self.operate_br_if(frame),
                 0x20 => self.operate_local_get(frame),
                 0x21 => self.operate_local_set(frame),
@@ -76,7 +77,7 @@ impl Evaluator {
                 0x4f => self.operate_i32_ge_u(),
                 0x6A => self.operate_i32_add(),
                 opcode => {
-                    println!("[execute] {:?}", frame);
+                    // println!("[execute] {:?}", frame);
                     println!("[execute] {}", self.stack.inspect());
                     println!("[execute] opcode: {:x}", opcode);
                     todo!();
@@ -98,7 +99,7 @@ impl Evaluator {
 
         // start_idx は 0x02 オペコードを指しており、次は arity のため2つ飛ばす
         frame.set_counter(label.start_idx + 2);
-        println!("# [operate_block] label {:?}", label);
+        println!("# [operate_block] Label {:?}", label);
         self.stack.push_label(label);
     }
 
@@ -125,17 +126,14 @@ impl Evaluator {
     // 0x0c
     fn operate_br(&mut self, frame: &mut Frame) {
         let label_idx = self.read_u_leb128(frame);
-        let label = (*frame
-            .function
-            .blocks
-            .get(&label_idx)
-            .unwrap_or_else(|| panic!("# [operate_br] Label の取得に失敗しました。")))
-        .clone();
-        println!("# [operate_br] {:?}", label);
+        let label = self.stack.get_label(label_idx);
 
-        let result = self.stack.pop_value();
-        println!("# [operate_br] {:?}", result);
-
+        println!("# [operate_br Label] {:?}", label);
+        let result: Number;
+        if label.arity.len() != 0 {
+            result = self.stack.pop_value();
+            println!("# [operate_br result] {:?}", result);
+        }
         if label.instruction == 0x03 {
             frame.set_counter(label.start_idx);
         } else {
@@ -145,7 +143,9 @@ impl Evaluator {
 
     // 0x0d
     fn operate_br_if(&mut self, frame: &mut Frame) {
-        if self.stack.pop_value().value.i32() == 0 {
+        let value = self.stack.pop_value().value.i32();
+
+        if value == 0 {
             self.read_u_leb128(frame);
         } else {
             self.operate_br(frame);
