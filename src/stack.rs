@@ -108,7 +108,7 @@ impl Stack {
         let counter = frame.get_counter();
         frame.increment_counter(1);
 
-        if let Some(opcode) = frame.function.expressions.get(counter) {
+        if let Some(opcode) = frame.function.bytecodes.get(counter) {
             // println!("[next_opcode] opcode: {:x} counter: {}", opcode, counter);
             Some(*opcode)
         } else {
@@ -129,10 +129,10 @@ impl Stack {
         }
     }
 
-    pub fn current_expression(&self, frame: &mut Frame) -> Vec<u8> {
-        match frame.function.expressions.get(frame.get_counter()..) {
-            Some(expression) => expression.to_vec(),
-            None => panic!("expression が存在しません。"),
+    pub fn current_bytecodes(&self, frame: &mut Frame) -> Vec<u8> {
+        match frame.function.bytecodes.get(frame.get_counter()..) {
+            Some(bytecodes) => bytecodes.to_vec(),
+            None => panic!("bytecodes が存在しません。"),
         }
     }
 

@@ -164,6 +164,7 @@ impl Decoder {
         println!("  Function count: {}", function_count);
 
         for i in 0..function_count {
+            // TODO: 取得したインデックスを使うべきか？
             let [_, _] = self.reader.read_unsigned_leb128();
             let func_type = self.module.function_types[i].clone();
             self.module
@@ -176,6 +177,7 @@ impl Decoder {
     ///
     /// Reference
     /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#export-section
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#function-section
     ///
     /// ```
     /// [
@@ -223,33 +225,40 @@ impl Decoder {
     }
 
     /// Code Section
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#code-section
+    ///
     /// ```
     /// [
-    ///   local variable and expression pair count,
-    ///   local variable and expression pair size,
+    ///   local variable and bytecodes pair count,
+    ///   local variable and bytecodes pair size,
     ///   local variable count,
     ///   local variable type count,
     ///   local variable type,
     ///   ...
-    ///   expressions...,
+    ///   byte code of the function...
     /// ]
     /// ```
     fn decode_code_section(&mut self) {
         println!("#[Decode Code Section]");
 
-        let [code_count, _] = self.reader.read_unsigned_leb128();
-        println!("  Function body count: {}", code_count);
+        let [function_body_count, _] = self.reader.read_unsigned_leb128();
+        println!("  Function body count: {}", function_body_count);
 
-        for code_idx in 0..code_count {
-            self.decode_code_section_body(code_idx)
+        for function_body_idx in 0..function_body_count {
+            self.decode_code_section_function_body(function_body_idx);
+            self.analyze_code_section_function_body_code(function_body_idx);
         }
     }
 
-    fn decode_code_section_body(&mut self, code_idx: usize) {
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#function-bodies
+    fn decode_code_section_function_body(&mut self, code_idx: usize) {
         println!("  Code index {}", code_idx);
 
-        let [code_size, _] = self.reader.read_unsigned_leb128();
-        println!("  Code size: {}", code_size);
+        let [body_size, _] = self.reader.read_unsigned_leb128();
+        println!("  Function body size: {}", body_size);
 
         let mut local_var_byte_size: usize = 0;
         let [local_var_count, size] = self.reader.read_unsigned_leb128();
@@ -261,14 +270,15 @@ impl Decoder {
             local_var_byte_size += local_var_type_count_byte_size;
             local_var_byte_size += 1;
         }
-        let expression_buf = self.reader.read_bytes(code_size - local_var_byte_size);
-        self.module.functions[code_idx].expressions = expression_buf.to_vec();
+        let bytecodes_buf = self.reader.read_bytes(body_size - local_var_byte_size);
+        self.module.functions[code_idx].bytecodes = bytecodes_buf.to_vec();
 
         println!("{}", self.module.functions[code_idx].inspect());
-
-        self.decode_code_section_body_block(code_idx);
     }
 
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#local-entry
     fn decode_code_section_body_local_var(&mut self, func_idx: usize) -> usize {
         let [local_var_type_count, local_var_type_count_byte_size] =
             self.reader.read_unsigned_leb128();
@@ -283,8 +293,8 @@ impl Decoder {
         local_var_type_count_byte_size
     }
 
-    fn decode_code_section_body_block(&mut self, func_idx: usize) {
-        let mut expressions = self.module.functions[func_idx].expressions.clone();
+    fn analyze_code_section_function_body_code(&mut self, func_idx: usize) {
+        let mut bytecodes = self.module.functions[func_idx].bytecodes.clone();
         let mut blocks: HashMap<usize, Block> = HashMap::new();
         let mut block_stack = vec![Block::new(
             2,
@@ -293,15 +303,14 @@ impl Decoder {
             None,
         )];
 
-        expressions.reverse();
+        bytecodes.reverse();
         loop {
-            if expressions.len() == 0 {
+            if bytecodes.len() == 0 {
                 break;
             }
-            match self.find_next_structured_instruction(&mut expressions) {
+            match self.find_next_structured_instruction(&mut bytecodes) {
                 Some(structured_instruction) => {
-                    let idx =
-                        self.module.functions[func_idx].expressions.len() - expressions.len() - 1;
+                    let idx = self.module.functions[func_idx].bytecodes.len() - bytecodes.len() - 1;
                     println!("  Expression idx:{}", idx);
                     match OpCode::from_byte(structured_instruction) {
                         OpCode::End => {
@@ -311,7 +320,7 @@ impl Decoder {
                         }
                         op => {
                             println!("  Structured Instruction OpCode: {:?}", op);
-                            let opcode = expressions.pop().unwrap_or_else(|| {
+                            let opcode = bytecodes.pop().unwrap_or_else(|| {
                                 panic!("Block Section の arity 読み込みに失敗しました。")
                             });
                             let arity: Vec<NumberType> = if opcode == 0x40 {
@@ -343,13 +352,13 @@ impl Decoder {
         NumberType::decode_type(byte)
     }
 
-    fn find_next_structured_instruction(&mut self, expression: &mut Vec<u8>) -> Option<u8> {
+    fn find_next_structured_instruction(&mut self, bytecodes: &mut Vec<u8>) -> Option<u8> {
         let mut byte;
         loop {
-            if expression.len() == 0 {
+            if bytecodes.len() == 0 {
                 return None;
             }
-            byte = expression.pop().unwrap();
+            byte = bytecodes.pop().unwrap();
             match OpCode::from_byte(byte) {
                 OpCode::Block | OpCode::Loop | OpCode::If | OpCode::End => {
                     // println!("block or loop or if or end");
@@ -357,7 +366,7 @@ impl Decoder {
                 }
                 OpCode::Br | OpCode::BrIf => {
                     // println!("br or br_if");
-                    Decoder::decode_unsigned_leb128(expression);
+                    Decoder::decode_unsigned_leb128(bytecodes);
                 }
                 OpCode::GetLocal
                 | OpCode::SetLocal
@@ -365,11 +374,11 @@ impl Decoder {
                 | OpCode::GetGlobal
                 | OpCode::SetGlobal => {
                     println!("  OpCode: {:x} get/set local/global", byte);
-                    Decoder::decode_unsigned_leb128(expression);
+                    Decoder::decode_unsigned_leb128(bytecodes);
                 }
                 OpCode::I32Const | OpCode::I64Const | OpCode::F32Const | OpCode::F64Const => {
                     println!("  OpCode: {:x} Const", byte);
-                    Decoder::decode_signed_leb128(expression);
+                    Decoder::decode_signed_leb128(bytecodes);
                 }
                 _ => {}
             };

@@ -2,10 +2,10 @@
 pub enum OpCode {
     Unreachable = 0x00, // trap immediately
     Nop = 0x01,         // no operation
-    Block = 0x02,       //sig : block_type	begin a sequence of expressions, yielding 0 or 1 values
+    Block = 0x02,       //sig : block_type	begin a sequence of bytecodes, yielding 0 or 1 values
     Loop = 0x03,        //sig : block_type	begin a block which can also form control flow loops
-    If = 0x04,          //sig : block_type	begin if expression
-    Else = 0x05,        // begin else expression of if
+    If = 0x04,          //sig : block_type	begin if bytecodes
+    Else = 0x05,        // begin else bytecodes of if
     End = 0x0b,         // end a block, loop, or if
     Br = 0x0c,          //relative_depth : varuint32	break that targets an outer nested block
     BrIf = 0x0d, //relative_depth : varuint32	conditional break that targets an outer nested block

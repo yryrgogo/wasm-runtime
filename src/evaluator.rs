@@ -127,7 +127,7 @@ impl Evaluator {
     // 0x0b
     fn operate_end(&mut self, frame: &Frame) {
         let counter = frame.get_counter();
-        let last_idx = frame.function.expressions.len();
+        let last_idx = frame.function.bytecodes.len();
         if counter != last_idx {
             self.stack.pop_last_label();
             return;
@@ -246,7 +246,7 @@ impl Evaluator {
     }
 
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
-        match read_unsigned_leb128(&self.stack.current_expression(frame)) {
+        match read_unsigned_leb128(&self.stack.current_bytecodes(frame)) {
             Ok((value, size)) => {
                 frame.increment_counter(size);
                 value
@@ -256,7 +256,7 @@ impl Evaluator {
     }
 
     fn read_s_leb128(&mut self, frame: &mut Frame) -> isize {
-        match read_signed_leb128(&self.stack.current_expression(frame)) {
+        match read_signed_leb128(&self.stack.current_bytecodes(frame)) {
             Ok((value, size)) => {
                 frame.increment_counter(size);
                 value

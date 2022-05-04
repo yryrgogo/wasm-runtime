@@ -9,7 +9,7 @@ use super::{
 pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
-    pub expressions: Vec<u8>,
+    pub bytecodes: Vec<u8>,
     pub blocks: HashMap<usize, Block>,
 }
 
@@ -25,7 +25,7 @@ impl Function {
         Function {
             func_type: func_type,
             local_vars: vec![],
-            expressions: vec![],
+            bytecodes: vec![],
             blocks: HashMap::new(),
         }
     }
@@ -43,14 +43,14 @@ impl Function {
     }
     pub fn inspect(&self) -> String {
         format!(
-            "#<Function func_type:{} locals=[{}] expression={}>",
+            "#<Function func_type:{} locals=[{}] bytecodes={}>",
             self.func_type.inspect(),
             self.local_vars
                 .iter()
                 .map(|x| x.inspect())
                 .collect::<Vec<String>>()
                 .join(", "),
-            self.expressions.len()
+            self.bytecodes.len()
         )
     }
 }
