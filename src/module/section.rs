@@ -21,7 +21,7 @@ impl SectionId {
 
 pub struct TypeSection;
 impl TypeSection {
-    pub fn validate_signature_header(header: u8) {
+    pub fn validate_type_entry_header(header: u8) {
         const HEADER: u8 = 0x60;
         if header != HEADER {
             panic!("Invalid TypeSection header {}", header);
@@ -29,21 +29,21 @@ impl TypeSection {
     }
 }
 
-pub enum ExportDesc {
+pub enum ExportKind {
     Func = 0x00,
     Table = 0x01,
     LinearMemory = 0x02,
     GlobalVariable = 0x03,
 }
 
-impl ExportDesc {
-    pub fn from_usize(n: u8) -> Option<ExportDesc> {
+impl ExportKind {
+    pub fn from_usize(n: u8) -> Option<ExportKind> {
         match n {
-            0 => Some(ExportDesc::Func),
-            1 => Some(ExportDesc::Table),
-            2 => Some(ExportDesc::LinearMemory),
-            3 => Some(ExportDesc::GlobalVariable),
-            _ => panic!("Invalid Export Desc {}", n),
+            0 => Some(ExportKind::Func),
+            1 => Some(ExportKind::Table),
+            2 => Some(ExportKind::LinearMemory),
+            3 => Some(ExportKind::GlobalVariable),
+            _ => panic!("Invalid Export Kind {}", n),
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::{
         function_type::FunctionType,
         number::NumberType,
         opcode::OpCode,
-        section::{ExportDesc, SectionId, TypeSection},
+        section::{ExportKind, SectionId, TypeSection},
         Module,
     },
 };
@@ -92,10 +92,14 @@ impl Decoder {
         Ok(())
     }
 
-    /// Type Section
+    /// Decode TypeSection
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#type-section
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#func_type
     /// ```
     /// [
-    ///  signature count,
+    ///  type entry count,
     ///  type section header,
     ///  function parameter count,
     ///  function parameter type,
@@ -106,20 +110,18 @@ impl Decoder {
     fn decode_type_section(&mut self) {
         println!("#[Decode Type Section]");
 
-        let [signature_count, size] = self.reader.read_unsigned_leb128();
+        let [type_entry_count, size] = self.reader.read_unsigned_leb128();
         println!(
-            "  Signature count: {} Decoded size: {}",
-            signature_count, size
+            "  type entry count: {} Decoded size: {}",
+            type_entry_count, size
         );
 
-        TypeSection::validate_signature_header(
-            self.reader
-                .read_next_byte()
-                .unwrap_or_else(|| panic!("  TypeSection のシグネチャヘッダが見つかりません。")),
-        );
+        for s_i in 0..type_entry_count {
+            println!("  type entry {}", s_i + 1);
 
-        for s_i in 0..signature_count {
-            println!("  Signature {}", s_i + 1);
+            TypeSection::validate_type_entry_header(self.reader.read_next_byte().unwrap_or_else(
+                || panic!("  TypeSection の type entry header が見つかりません。"),
+            ));
 
             let mut func_type = FunctionType::default();
 
@@ -145,6 +147,10 @@ impl Decoder {
     }
 
     /// Function Section
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#function-section
+    ///
     /// ```
     /// [
     ///  function count,
@@ -167,38 +173,39 @@ impl Decoder {
     }
 
     /// Export Section
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#export-section
+    ///
     /// ```
     /// [
     ///  export count,
     ///  export name size,
-    ///  export desc （Export される値のタイプ）,
-    ///  export desc index （Export される値のインデックス。Function の場合は Function の index）
+    ///  export kind （Export される値のタイプ）,
+    ///  export kind index （Export される値のインデックス。Function の場合は Function の index）
     /// ]
     /// ```
     fn decode_export_section(&mut self) {
         println!("Decode Export Section");
 
-        let [export_count, _] = self.reader.read_unsigned_leb128();
+        let [export_entry_count, _] = self.reader.read_unsigned_leb128();
 
-        println!("Export count: {}", export_count);
-        for _ in 0..export_count {
+        println!("Export entry count: {}", export_entry_count);
+        for _ in 0..export_entry_count {
             let [name_size, _] = self.reader.read_unsigned_leb128();
             let name_buf = self.reader.read_bytes(name_size);
             let name = std::str::from_utf8(&name_buf).unwrap();
-            let desc = self
+            let kind = self
                 .reader
                 .read_next_byte()
-                .unwrap_or_else(|| panic!("Export Section の desc byte が見つかりません"));
+                .unwrap_or_else(|| panic!("Export Section の kind byte が見つかりません"));
 
-            match ExportDesc::from_usize(desc).unwrap() {
-                ExportDesc::Func => {
+            match ExportKind::from_usize(kind).unwrap() {
+                ExportKind::Func => {
                     if self.module.exported.contains_key(name) {
                         panic!("{} key already exists", name);
                     }
-                    let index = self
-                        .reader
-                        .read_next_byte()
-                        .unwrap_or_else(|| panic!("Export Section の index byte が見つかりません"));
+                    let [index, _] = self.reader.read_unsigned_leb128();
                     let func_idx = usize::from(index);
                     self.module.exported.insert(
                         name.to_string(),
@@ -208,9 +215,9 @@ impl Decoder {
                         },
                     );
                 }
-                ExportDesc::Table => todo!(),
-                ExportDesc::LinearMemory => todo!(),
-                ExportDesc::GlobalVariable => todo!(),
+                ExportKind::Table => todo!(),
+                ExportKind::LinearMemory => todo!(),
+                ExportKind::GlobalVariable => todo!(),
             }
         }
     }
