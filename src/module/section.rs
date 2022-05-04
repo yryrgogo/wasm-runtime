@@ -21,7 +21,7 @@ impl SectionId {
 
 pub struct TypeSection;
 impl TypeSection {
-    pub fn validate_header(header: u8) {
+    pub fn validate_signature_header(header: u8) {
         const HEADER: u8 = 0x60;
         if header != HEADER {
             panic!("Invalid TypeSection header {}", header);

@@ -112,10 +112,10 @@ impl Decoder {
             signature_count, size
         );
 
-        TypeSection::validate_header(
+        TypeSection::validate_signature_header(
             self.reader
                 .read_next_byte()
-                .unwrap_or_else(|| panic!("  TypeSection のヘッダが見つかりません。")),
+                .unwrap_or_else(|| panic!("  TypeSection のシグネチャヘッダが見つかりません。")),
         );
 
         for s_i in 0..signature_count {
