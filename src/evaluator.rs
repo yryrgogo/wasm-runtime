@@ -19,10 +19,10 @@ impl Evaluator {
         &mut self,
         module: &Module,
         func_name: &String,
-        args: Vec<Number>,
+        args: Vec<i32>,
     ) -> Option<Number> {
         for num in args {
-            self.stack.push_values(num);
+            self.stack.push_values(Number::i32(Some(num)));
         }
 
         let func_idx = module.exported.get(func_name).unwrap().index;
@@ -45,10 +45,16 @@ impl Evaluator {
         let mut args: Vec<Number> = vec![];
 
         for (_, _) in func.func_type.parameters.iter().enumerate() {
-            let value = self
-                .stack
-                .pop_value()
-                .unwrap_or_else(|| panic!("Function のパラメータが Stack に存在しません。"));
+            let value = self.stack.pop_value().unwrap_or_else(|| {
+                panic!(
+                    "
+Function のパラメータが Stack に存在しません。\n
+function type: {:#?}
+stack: {:#?}
+",
+                    func.func_type, self.stack
+                )
+            });
             match value.num_type {
                 NumberType::Int32 => {
                     args.push(value);
@@ -321,15 +327,15 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(3))]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![3]);
             assert_eq!(result.unwrap().value.i32(), 2);
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(5))]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![5]);
             assert_eq!(result.unwrap().value.i32(), 5);
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(8))]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![8]);
             assert_eq!(result.unwrap().value.i32(), 21);
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![10]);
             assert_eq!(result.unwrap().value.i32(), 55);
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(20))]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![20]);
             assert_eq!(result.unwrap().value.i32(), 6765);
         }
     }

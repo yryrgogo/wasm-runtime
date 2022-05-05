@@ -6,6 +6,7 @@ use crate::module::number::{
 };
 use crate::structure::frame::Frame;
 
+#[derive(Debug)]
 pub struct Stack {
     pub stack: Vec<Instructions>,
     pub frame_positions: Vec<usize>,
@@ -152,16 +153,5 @@ impl Stack {
             unreachable!()
         };
         label.clone()
-    }
-
-    pub fn inspect(&self) -> String {
-        format!(
-            "Stack size: {}
-#Stack<\n
-stack: Vec<Instructions> {:#?}\n
->",
-            self.stack.len(),
-            self.stack
-        )
     }
 }
