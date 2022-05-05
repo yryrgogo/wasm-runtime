@@ -464,13 +464,23 @@ mod leb_tests {
     use super::*;
 
     #[test]
-    fn can_read_unsigned_leb128() {
+    fn can_read_unsigned_leb128_1() {
         let wasm_module = vec![229, 142, 38, 0, 0, 0, 0, 0];
         let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
         let [value, size] = decoder.reader.read_unsigned_leb128();
 
         assert_eq!(value, 624485);
         assert_eq!(size, 3);
+    }
+
+    #[test]
+    fn can_read_unsigned_leb128_2() {
+        let wasm_module = vec![0x80, 0x80, 0xC0, 0x00, 0x0B];
+        let mut decoder = Decoder::new(None, Some(wasm_module)).unwrap();
+        let [value, size] = decoder.reader.read_unsigned_leb128();
+
+        assert_eq!(value, 1048576);
+        assert_eq!(size, 4);
     }
 
     #[test]

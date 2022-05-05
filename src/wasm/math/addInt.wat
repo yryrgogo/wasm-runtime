@@ -1,5 +1,5 @@
 (module
-  (func (export "AddInt")
+  (func (export "addInt")
     (param $value_1 i32) (param $value_2 i32)
     (result i32)
     local.get $value_1

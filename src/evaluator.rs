@@ -91,6 +91,7 @@ stack: {:#?}
                 Some(0x41) => self.operate_i32_const(frame),
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
+                Some(0x74) => self.operate_i32_shl(),
                 Some(opcode) => {
                     todo!("#[execute] opcode: {:x}", opcode);
                 }
@@ -107,7 +108,7 @@ stack: {:#?}
             .function
             .blocks
             .get(&block_start_counter)
-            .unwrap_or_else(|| panic!("# [operate_block Label の取得に失敗しました。]")))
+            .unwrap_or_else(|| panic!("# [operate_block] Label の取得に失敗しました。]")))
         .clone();
 
         // start_idx は 0x02 オペコードを指しており、次は arity のため2つ飛ばす
@@ -290,6 +291,21 @@ stack: {:#?}
         println!("[i32_add] {:?}", Number::i32(Some(n)));
     }
 
+    // 0x74
+    fn operate_i32_shl(&mut self) {
+        let shift_left = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x74] 左シフトする数が Stack に存在しません。"));
+        let value = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x74] 左シフトする値が Stack に存在しません。"));
+        self.stack.push_values(Number::i32(Some(
+            value.value.i32() << shift_left.value.i32(),
+        )))
+    }
+
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
         match read_unsigned_leb128(&self.stack.current_bytecodes(frame)) {
             Ok((value, size)) => {
@@ -364,7 +380,28 @@ mod evaluator_tests {
             assert_eq!(result.unwrap().value.i32(), 100000);
 
             let result = eval.invoke(&decoder.module, &func_name, vec![99999999, 99999]);
-            assert_eq!(result.unwrap().value.i32(),100099998);
+            assert_eq!(result.unwrap().value.i32(), 100099998);
+        }
+    }
+
+    #[test]
+    fn can_evaluate_twice_int() {
+        let path = "src/wasm/math/twice.wasm".to_string();
+        let mut decoder = Decoder::new(Some(&path), None).unwrap();
+
+        decoder.run();
+
+        let mut eval = Evaluator::new();
+
+        for func_name in decoder.module.exported.keys() {
+            let result = eval.invoke(&decoder.module, &func_name, vec![1]);
+            assert_eq!(result.unwrap().value.i32(), 2);
+
+            let result = eval.invoke(&decoder.module, &func_name, vec![10]);
+            assert_eq!(result.unwrap().value.i32(), 20);
+
+            let result = eval.invoke(&decoder.module, &func_name, vec![55]);
+            assert_eq!(result.unwrap().value.i32(), 110);
         }
     }
 }
