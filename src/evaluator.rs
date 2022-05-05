@@ -5,25 +5,28 @@ use crate::util::leb::read_unsigned_leb128;
 use crate::{module::Module, stack::Stack};
 
 pub struct Evaluator {
-    module: Module,
     stack: Stack,
 }
 
 impl Evaluator {
-    pub fn new(module: Module) -> Evaluator {
+    pub fn new() -> Evaluator {
         Evaluator {
             stack: Stack::new(),
-            module: module,
         }
     }
 
-    pub fn invoke(&mut self, func_name: String, args: Vec<Number>) -> Number {
+    pub fn invoke(
+        &mut self,
+        module: &Module,
+        func_name: &String,
+        args: Vec<Number>,
+    ) -> Option<Number> {
         for num in args {
             self.stack.push_values(num);
         }
 
-        let func_idx = self.module.exported.get(&func_name).unwrap().index;
-        self.call(func_idx);
+        let func_idx = module.exported.get(func_name).unwrap().index;
+        self.call(module, func_idx);
 
         loop {
             match self.stack.current_frame() {
@@ -37,12 +40,15 @@ impl Evaluator {
         self.stack.pop_value()
     }
 
-    fn call(&mut self, func_idx: usize) {
-        let func = self.module.functions.get(func_idx).unwrap().clone();
+    fn call(&mut self, module: &Module, func_idx: usize) {
+        let func = module.functions.get(func_idx).unwrap().clone();
         let mut args: Vec<Number> = vec![];
 
         for (_, _) in func.func_type.parameters.iter().enumerate() {
-            let value = self.stack.pop_value();
+            let value = self
+                .stack
+                .pop_value()
+                .unwrap_or_else(|| panic!("Function のパラメータが Stack に存在しません。"));
             match value.num_type {
                 NumberType::Int32 => {
                     args.push(value);
@@ -106,7 +112,10 @@ impl Evaluator {
 
     // 0x04
     fn operate_if(&mut self, frame: &mut Frame) {
-        let num = self.stack.pop_value();
+        let num = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x04] if の条件値が存在しません。"));
         if num.value.i32() == 0 {
             let block_start_counter = frame.get_counter() - 1;
             let label = (*frame
@@ -133,11 +142,13 @@ impl Evaluator {
             return;
         }
 
-        let result = self.stack.pop_value();
-        println!("#[operate_end] Result: {:#?}", result);
+        let value = self.stack.pop_value();
+        println!("#[operate_end] Result: {:#?}", value);
         if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
             self.stack.pop_current_frame();
-            self.stack.push_values(result);
+            if let Some(result) = value {
+                self.stack.push_values(result);
+            }
         } else {
             unreachable!("#[operate_end] Stack top が Frame ではありません。")
         };
@@ -152,7 +163,13 @@ impl Evaluator {
 
         let mut result: Option<Number> = None;
         if label.arity.len() != 0 {
-            result = Some(self.stack.pop_value());
+            let return_value = self.stack.pop_value().unwrap_or_else(|| {
+                panic!(
+                    "arity {:#?} に対応する値が Stack に存在しません。",
+                    label.arity
+                )
+            });
+            result = Some(return_value);
         }
 
         self.stack
@@ -170,7 +187,12 @@ impl Evaluator {
 
     // 0x0d
     fn operate_br_if(&mut self, frame: &mut Frame) {
-        let value = self.stack.pop_value().value.i32();
+        let value = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x0d] br_if の条件式に対応する値が Stack に存在しません。"))
+            .value
+            .i32();
 
         if value == 0 {
             self.read_u_leb128(frame);
@@ -192,7 +214,12 @@ impl Evaluator {
     // 0x21
     fn operate_local_set(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
-        frame.local_vars[local_idx] = self.stack.pop_value();
+        frame.local_vars[local_idx] = self.stack.pop_value().unwrap_or_else(|| {
+            panic!(
+                "[0x21] local var {} にセットする値が Stack に存在しません。",
+                local_idx
+            )
+        });
 
         println!("[local_set] {:?}", frame.local_vars[local_idx]);
     }
@@ -223,8 +250,14 @@ impl Evaluator {
 
     // 0x4f
     fn operate_i32_ge_u(&mut self) {
-        let n2 = self.stack.pop_value();
-        let n1 = self.stack.pop_value();
+        let n2 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x4f] 比較に必要な値2が Stack に存在しません。"));
+        let n1 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x4f] 比較に必要な値1が Stack に存在しません。"));
         let result: Number;
         if n1.value > n2.value {
             result = Number::i32(Some(1));
@@ -238,8 +271,14 @@ impl Evaluator {
 
     // 0x6A
     fn operate_i32_add(&mut self) {
-        let n2 = self.stack.pop_value();
-        let n1 = self.stack.pop_value();
+        let n2 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x6A] 加算に必要な値2が Stack に存在しません。"));
+        let n1 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x6A] 加算に必要な値1が Stack に存在しません。"));
         let n: i32 = n1.value.i32() + n2.value.i32();
         self.stack.push_values(Number::i32(Some(n)));
         println!("[i32_add] {:?}", Number::i32(Some(n)));
@@ -274,23 +313,24 @@ mod evaluator_tests {
 
     #[test]
     fn can_evaluate_fibonacci() {
-        let path = "src/wasm/fibonacci/fib.wasm";
-        let mut decoder = Decoder::new(Some(path), None).unwrap();
+        let path = "src/wasm/fibonacci/fib.wasm".to_string();
+        let mut decoder = Decoder::new(Some(&path), None).unwrap();
 
         decoder.run();
-        decoder.inspect();
 
-        let mut eval = Evaluator::new(decoder.module);
+        let mut eval = Evaluator::new();
 
-        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(3))]);
-        assert_eq!(result.value.i32(), 2);
-        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(5))]);
-        assert_eq!(result.value.i32(), 5);
-        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(8))]);
-        assert_eq!(result.value.i32(), 21);
-        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(10))]);
-        assert_eq!(result.value.i32(), 55);
-        let result = eval.invoke("fib".to_string(), vec![Number::i32(Some(20))]);
-        assert_eq!(result.value.i32(), 6765);
+        for func_name in decoder.module.exported.keys() {
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(3))]);
+            assert_eq!(result.unwrap().value.i32(), 2);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(5))]);
+            assert_eq!(result.unwrap().value.i32(), 5);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(8))]);
+            assert_eq!(result.unwrap().value.i32(), 21);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
+            assert_eq!(result.unwrap().value.i32(), 55);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(20))]);
+            assert_eq!(result.unwrap().value.i32(), 6765);
+        }
     }
 }

@@ -54,23 +54,27 @@ impl Stack {
         self.label_positions.push(self.stack.len() - 1);
     }
 
-    pub fn pop_value(&mut self) -> Number {
-        let instruction = self.stack.pop().unwrap();
-        if let Instructions::Number(num) = instruction {
-            match num.num_type {
-                Uint32 => {
-                    let mut v = (num.value.u32() - 2_u32.pow(31)) as i32;
-                    v = v - 2_i32.pow(30) - 2_i32.pow(30);
-                    Number::i32(Some(v))
+    pub fn pop_value(&mut self) -> Option<Number> {
+        match self.stack.pop() {
+            Some(instruction) => {
+                if let Instructions::Number(num) = instruction {
+                    match num.num_type {
+                        Uint32 => {
+                            let mut v = (num.value.u32() - 2_u32.pow(31)) as i32;
+                            v = v - 2_i32.pow(30) - 2_i32.pow(30);
+                            Some(Number::i32(Some(v)))
+                        }
+                        Uint64 => {
+                            let v = num.value.u64() - 2_u64.pow(31) - 2_u64.pow(31);
+                            Some(Number::i64(Some(v as i64)))
+                        }
+                        _ => Some(num),
+                    }
+                } else {
+                    panic!("stack top is not value: {:?}", instruction)
                 }
-                Uint64 => {
-                    let v = num.value.u64() - 2_u64.pow(31) - 2_u64.pow(31);
-                    Number::i64(Some(v as i64))
-                }
-                _ => num,
             }
-        } else {
-            panic!("stack top is not value: {:?}", instruction)
+            None => None,
         }
     }
 

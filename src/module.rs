@@ -34,7 +34,15 @@ impl Default for Module {
 
 impl Debug for Module {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{:#?}", self.exported)
+        write!(
+            f,
+            "
+functions: {:#?}
+function_types: {:#?}
+exported: {:#?}
+",
+            self.functions, self.function_types, self.exported
+        )
     }
 }
 
