@@ -86,8 +86,4 @@ impl Number {
         let v = value.unwrap();
         Number::new(64, NumberType::Float64, Value::Float64(v))
     }
-
-    pub fn inspect(&self) -> String {
-        format!("{:?}", self.num_type)
-    }
 }

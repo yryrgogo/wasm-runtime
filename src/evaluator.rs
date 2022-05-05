@@ -329,14 +329,42 @@ mod evaluator_tests {
         for func_name in decoder.module.exported.keys() {
             let result = eval.invoke(&decoder.module, &func_name, vec![3]);
             assert_eq!(result.unwrap().value.i32(), 2);
+
             let result = eval.invoke(&decoder.module, &func_name, vec![5]);
             assert_eq!(result.unwrap().value.i32(), 5);
+
             let result = eval.invoke(&decoder.module, &func_name, vec![8]);
             assert_eq!(result.unwrap().value.i32(), 21);
+
             let result = eval.invoke(&decoder.module, &func_name, vec![10]);
             assert_eq!(result.unwrap().value.i32(), 55);
+
             let result = eval.invoke(&decoder.module, &func_name, vec![20]);
             assert_eq!(result.unwrap().value.i32(), 6765);
+        }
+    }
+
+    #[test]
+    fn can_evaluate_add_int() {
+        let path = "src/wasm/math/addInt.wasm".to_string();
+        let mut decoder = Decoder::new(Some(&path), None).unwrap();
+
+        decoder.run();
+
+        let mut eval = Evaluator::new();
+
+        for func_name in decoder.module.exported.keys() {
+            let result = eval.invoke(&decoder.module, &func_name, vec![1, 2]);
+            assert_eq!(result.unwrap().value.i32(), 3);
+
+            let result = eval.invoke(&decoder.module, &func_name, vec![-1, 2]);
+            assert_eq!(result.unwrap().value.i32(), 1);
+
+            let result = eval.invoke(&decoder.module, &func_name, vec![1, 99999]);
+            assert_eq!(result.unwrap().value.i32(), 100000);
+
+            let result = eval.invoke(&decoder.module, &func_name, vec![99999999, 99999]);
+            assert_eq!(result.unwrap().value.i32(),100099998);
         }
     }
 }
