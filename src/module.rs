@@ -1,4 +1,5 @@
 use crate::export::ExportMap;
+use std::fmt::{Debug, Formatter, Result};
 
 use self::function::Function;
 use self::function_type::FunctionType;
@@ -28,6 +29,12 @@ impl Default for Module {
             function_types: vec![],
             exported: HashMap::new(),
         }
+    }
+}
+
+impl Debug for Module {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{:#?}", self.exported)
     }
 }
 

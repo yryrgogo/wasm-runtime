@@ -19,7 +19,7 @@ pub struct Decoder {
 
 impl Decoder {
     pub fn new(
-        path: Option<&str>,
+        path: Option<&String>,
         wasm_module: Option<Vec<u8>>,
     ) -> Result<Decoder, Box<dyn Error>> {
         Ok(Decoder {
@@ -31,6 +31,8 @@ impl Decoder {
     pub fn run(&mut self) {
         self.decode_header();
         self.decode_section();
+
+        println!("{:#?}", self.module);
     }
 
     pub fn decode_header(&mut self) {
@@ -42,6 +44,7 @@ impl Decoder {
     }
 
     pub fn decode_section(&mut self) {
+        println!("\n# Section Decode Start!\n");
         loop {
             match self.decode_section_id() {
                 Some(section_id) => self.decode_section_body(section_id).unwrap_or_else(|err| {
@@ -50,6 +53,7 @@ impl Decoder {
                 None => break,
             }
         }
+        println!("\n# Section Decode Complete!\n");
     }
 
     pub fn decode_section_id(&mut self) -> Option<u8> {
@@ -77,18 +81,6 @@ impl Decoder {
             SectionId::CodeSectionId => self.decode_code_section(),
         }
 
-        for func in self.module.functions.iter_mut() {
-            println!("{}", func.inspect());
-        }
-
-        for key in self.module.exported.keys() {
-            println!(
-                "{}: {}",
-                key,
-                self.module.exported.get(key).unwrap().function.inspect()
-            );
-        }
-
         Ok(())
     }
 
@@ -108,27 +100,35 @@ impl Decoder {
     /// ]
     /// ```
     fn decode_type_section(&mut self) {
-        println!("#[Decode Type Section]");
+        println!(
+            "
+#==============#
+# Type Section #
+#==============#
+        "
+        );
 
         let [type_entry_count, size] = self.reader.read_unsigned_leb128();
         println!(
-            "  type entry count: {} Decoded size: {}",
+            "type entry count: {} Decoded size: {}",
             type_entry_count, size
         );
 
         for s_i in 0..type_entry_count {
-            println!("  type entry {}", s_i + 1);
+            println!("* type entry {}", s_i + 1);
 
-            TypeSection::validate_type_entry_header(self.reader.read_next_byte().unwrap_or_else(
-                || panic!("  TypeSection の type entry header が見つかりません。"),
-            ));
+            TypeSection::validate_type_entry_header(
+                self.reader.read_next_byte().unwrap_or_else(|| {
+                    panic!("TypeSection の type entry header が見つかりません。")
+                }),
+            );
 
             let mut func_type = FunctionType::default();
 
             let [parameter_count, _] = self.reader.read_unsigned_leb128();
             for p_i in 0..parameter_count {
                 let num_type = self.decode_type().unwrap();
-                println!("  Parameter {} Type {:?}", p_i + 1, num_type);
+                println!("Parameter {} / Type {:?}", p_i + 1, num_type);
                 func_type.parameters.push(num_type);
             }
 
@@ -139,7 +139,7 @@ impl Decoder {
 
             for r_i in 0..result_count {
                 let value = self.decode_type().unwrap();
-                println!("  Result {} Type {:?}", r_i + 1, value);
+                println!("Result {} / Type {:?}", r_i + 1, value);
                 func_type.results.push(value);
             }
             self.module.function_types.push(func_type);
@@ -158,10 +158,16 @@ impl Decoder {
     /// ]
     /// ```
     fn decode_function_section(&mut self) {
-        println!("#[Decode Function Section]");
+        println!(
+            "
+#==================#
+# Function Section #
+#==================#
+        "
+        );
 
         let [function_count, _] = self.reader.read_unsigned_leb128();
-        println!("  Function count: {}", function_count);
+        println!("function count: {}", function_count);
 
         for i in 0..function_count {
             // TODO: 取得したインデックスを使うべきか？
@@ -188,7 +194,13 @@ impl Decoder {
     /// ]
     /// ```
     fn decode_export_section(&mut self) {
-        println!("Decode Export Section");
+        println!(
+            "
+#================#
+# Export Section #
+#================#
+        "
+        );
 
         let [export_entry_count, _] = self.reader.read_unsigned_leb128();
 
@@ -241,10 +253,16 @@ impl Decoder {
     /// ]
     /// ```
     fn decode_code_section(&mut self) {
-        println!("#[Decode Code Section]");
+        println!(
+            "
+#==============#
+# Code Section #
+#==============#
+        "
+        );
 
         let [function_body_count, _] = self.reader.read_unsigned_leb128();
-        println!("  Function body count: {}", function_body_count);
+        println!("function body count: {}", function_body_count);
 
         for function_body_idx in 0..function_body_count {
             self.decode_code_section_function_body(function_body_idx);
@@ -255,15 +273,15 @@ impl Decoder {
     /// Reference
     /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#function-bodies
     fn decode_code_section_function_body(&mut self, code_idx: usize) {
-        println!("  Code index {}", code_idx);
+        println!("Code index {}", code_idx);
 
         let [body_size, _] = self.reader.read_unsigned_leb128();
-        println!("  Function body size: {}", body_size);
+        println!("Function body size: {}", body_size);
 
         let mut local_var_byte_size: usize = 0;
         let [local_var_count, size] = self.reader.read_unsigned_leb128();
         local_var_byte_size += size;
-        println!("  local var count: {}", local_var_count);
+        println!("local var count: {}", local_var_count);
 
         for _ in 0..local_var_count {
             let local_var_type_count_byte_size = self.decode_code_section_body_local_var(code_idx);
@@ -272,8 +290,6 @@ impl Decoder {
         }
         let bytecodes_buf = self.reader.read_bytes(body_size - local_var_byte_size);
         self.module.functions[code_idx].bytecodes = bytecodes_buf.to_vec();
-
-        println!("{}", self.module.functions[code_idx].inspect());
     }
 
     ///
@@ -284,7 +300,7 @@ impl Decoder {
             self.reader.read_unsigned_leb128();
         let local_var_type = self.decode_type().unwrap();
         println!(
-            "  local var type: {} count: {:x}",
+            "local var type: {} count: {:x}",
             local_var_type.inspect(),
             local_var_type_count
         );
@@ -311,7 +327,7 @@ impl Decoder {
             match self.find_next_structured_instruction(&mut bytecodes) {
                 Some(structured_instruction) => {
                     let idx = self.module.functions[func_idx].bytecodes.len() - bytecodes.len() - 1;
-                    println!("  Expression idx:{}", idx);
+                    println!("expression idx:{}", idx);
                     match OpCode::from_byte(structured_instruction) {
                         OpCode::End => {
                             let mut block = block_stack.pop().unwrap();
@@ -319,7 +335,7 @@ impl Decoder {
                             blocks.insert(block.start_idx, block);
                         }
                         op => {
-                            println!("  Structured Instruction OpCode: {:?}", op);
+                            println!("structured Instruction OpCode: {:?}", op);
                             let opcode = bytecodes.pop().unwrap_or_else(|| {
                                 panic!("Block Section の arity 読み込みに失敗しました。")
                             });
@@ -331,7 +347,7 @@ impl Decoder {
                                 });
                                 vec![v]
                             };
-                            println!("  [Structured Instruction] {:?} arity: {:?}", op, arity);
+                            println!("[Structured Instruction] {:?} arity: {:?}", op, arity);
                             let block = Block::new(structured_instruction, arity, idx, None);
                             block_stack.push(block);
                         }
@@ -373,11 +389,11 @@ impl Decoder {
                 | OpCode::TeeLocal
                 | OpCode::GetGlobal
                 | OpCode::SetGlobal => {
-                    println!("  OpCode: {:x} get/set local/global", byte);
+                    println!("OpCode: {:x} get/set local/global", byte);
                     Decoder::decode_unsigned_leb128(bytecodes);
                 }
                 OpCode::I32Const | OpCode::I64Const | OpCode::F32Const | OpCode::F64Const => {
-                    println!("  OpCode: {:x} Const", byte);
+                    println!("OpCode: {:x} Const", byte);
                     Decoder::decode_signed_leb128(bytecodes);
                 }
                 _ => {}
@@ -440,15 +456,6 @@ impl Decoder {
         }
 
         [value, byte_count]
-    }
-
-    pub fn inspect(&self) {
-        for func in self.module.functions.clone() {
-            println!("{}", func.inspect());
-            for (_, block) in func.blocks {
-                println!("{}", block.inspect());
-            }
-        }
     }
 }
 

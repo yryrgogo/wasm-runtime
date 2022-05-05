@@ -274,7 +274,7 @@ mod evaluator_tests {
 
     #[test]
     fn can_evaluate_fibonacci() {
-        let path = "src/wasm/fib.wasm";
+        let path = "src/wasm/fibonacci/fib.wasm";
         let mut decoder = Decoder::new(Some(path), None).unwrap();
 
         decoder.run();

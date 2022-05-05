@@ -12,7 +12,7 @@ pub struct WasmBinaryReader {
 }
 
 impl WasmBinaryReader {
-    pub fn new(path: Option<&str>, wasm_module: Option<Vec<u8>>) -> Result<Self, Box<dyn Error>> {
+    pub fn new(path: Option<&String>, wasm_module: Option<Vec<u8>>) -> Result<Self, Box<dyn Error>> {
         let mut buffer = Vec::new();
 
         if let Some(p) = path {

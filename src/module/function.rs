@@ -1,16 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use super::{
     function_type::FunctionType,
     number::{Number, NumberType},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub func_type: FunctionType,
     pub local_vars: Vec<NumberType>,
     pub bytecodes: Vec<u8>,
     pub blocks: HashMap<usize, Block>,
+    pub index: Option<usize>,
 }
 
 impl Default for Function {
@@ -20,6 +21,12 @@ impl Default for Function {
     }
 }
 
+// impl Debug for Function {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+//         write!(f, "{:#?}", self)
+//     }
+// }
+
 impl Function {
     pub fn new(func_type: FunctionType, index: Option<usize>) -> Function {
         Function {
@@ -27,6 +34,7 @@ impl Function {
             local_vars: vec![],
             bytecodes: vec![],
             blocks: HashMap::new(),
+            index: index,
         }
     }
     pub fn create_local_variables(&self) -> Vec<Number> {
@@ -40,18 +48,6 @@ impl Function {
                 _ => unreachable!(),
             })
             .collect::<Vec<Number>>()
-    }
-    pub fn inspect(&self) -> String {
-        format!(
-            "#<Function func_type:{} locals=[{}] bytecodes={}>",
-            self.func_type.inspect(),
-            self.local_vars
-                .iter()
-                .map(|x| x.inspect())
-                .collect::<Vec<String>>()
-                .join(", "),
-            self.bytecodes.len()
-        )
     }
 }
 
@@ -77,12 +73,5 @@ impl Block {
             start_idx: start_idx,
             end_idx: end,
         }
-    }
-
-    pub fn inspect(&self) -> String {
-        format!(
-            "#<Block arity={:?} instruction={}, start_idx={}, end_idx={}>",
-            self.arity, self.instruction, self.start_idx, self.end_idx
-        )
     }
 }
