@@ -342,7 +342,7 @@ impl Decoder {
                             let arity: Vec<NumberType> = if opcode == 0x40 {
                                 vec![]
                             } else {
-                                let v = NumberType::from_byte(opcode).unwrap_or_else(|| {
+                                let v = NumberType::decode_byte(opcode).unwrap_or_else(|| {
                                     panic!("NumberType に渡した byte 値が不正です。")
                                 });
                                 vec![v]
@@ -360,12 +360,12 @@ impl Decoder {
         self.module.functions[func_idx].blocks = blocks;
     }
 
-    fn decode_type(&mut self) -> Result<NumberType, Box<dyn Error>> {
+    fn decode_type(&mut self) -> Option<NumberType> {
         let byte = self
             .reader
             .read_next_byte()
             .unwrap_or_else(|| panic!("Value Type の byte 読み込みに失敗しました。"));
-        NumberType::decode_type(byte)
+        NumberType::decode_byte(byte)
     }
 
     fn find_next_structured_instruction(&mut self, bytecodes: &mut Vec<u8>) -> Option<u8> {
@@ -545,11 +545,11 @@ mod decode_tests {
 
         assert_eq!(
             func_type.parameters,
-            vec![NumberType::decode_type(0x7f).unwrap()]
+            vec![NumberType::decode_byte(0x7f).unwrap()]
         );
         assert_eq!(
             func_type.results,
-            vec![NumberType::decode_type(0x7f).unwrap()]
+            vec![NumberType::decode_byte(0x7f).unwrap()]
         );
     }
 
