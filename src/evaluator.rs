@@ -19,10 +19,10 @@ impl Evaluator {
         &mut self,
         module: &Module,
         func_name: &String,
-        args: Vec<i32>,
+        args: Vec<Number>,
     ) -> Option<Number> {
         for num in args {
-            self.stack.push_values(Number::i32(Some(num)));
+            self.stack.push_values(num);
         }
 
         let func_idx = module.exported.get(func_name).unwrap().index;
@@ -55,6 +55,7 @@ stack: {:#?}
                     func.func_type, self.stack
                 )
             });
+
             match value.num_type {
                 NumberType::Int32 => {
                     args.push(value);
@@ -92,6 +93,7 @@ stack: {:#?}
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
                 Some(0x74) => self.operate_i32_shl(),
+                Some(0x92) => self.operate_f32_add(),
                 Some(opcode) => {
                     todo!("#[execute] opcode: {:x}", opcode);
                 }
@@ -306,6 +308,21 @@ stack: {:#?}
         )))
     }
 
+    // 0x92
+    fn operate_f32_add(&mut self) {
+        let n2 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x92] 加算に必要な値2が Stack に存在しません。"));
+        let n1 = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x92] 加算に必要な値1が Stack に存在しません。"));
+        let n: f32 = n1.value.f32() + n2.value.f32();
+        self.stack.push_values(Number::f32(Some(n)));
+        println!("[f32_add] {:?}", Number::f32(Some(n)));
+    }
+
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
         match read_unsigned_leb128(&self.stack.current_bytecodes(frame)) {
             Ok((value, size)) => {
@@ -343,25 +360,25 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![3]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(3))]);
             assert_eq!(result.unwrap().value.i32(), 2);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![5]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(5))]);
             assert_eq!(result.unwrap().value.i32(), 5);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![8]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(8))]);
             assert_eq!(result.unwrap().value.i32(), 21);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![10]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
             assert_eq!(result.unwrap().value.i32(), 55);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![20]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(20))]);
             assert_eq!(result.unwrap().value.i32(), 6765);
         }
     }
 
     #[test]
-    fn can_evaluate_add_int() {
+    fn can_evaluate_add_i32() {
         let path = "src/wasm/math/addInt.wasm".to_string();
         let mut decoder = Decoder::new(Some(&path), None).unwrap();
 
@@ -370,17 +387,87 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![1, 2]);
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::i32(Some(1)), Number::i32(Some(2))],
+            );
             assert_eq!(result.unwrap().value.i32(), 3);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![-1, 2]);
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::i32(Some(-1)), Number::i32(Some(2))],
+            );
             assert_eq!(result.unwrap().value.i32(), 1);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![1, 99999]);
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::i32(Some(1)), Number::i32(Some(99999))],
+            );
             assert_eq!(result.unwrap().value.i32(), 100000);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![99999999, 99999]);
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::i32(Some(99999999)), Number::i32(Some(99999))],
+            );
             assert_eq!(result.unwrap().value.i32(), 100099998);
+        }
+    }
+
+    #[test]
+    fn can_evaluate_add_f32() {
+        let path = "src/wasm/math/addFloat.wasm".to_string();
+        let mut decoder = Decoder::new(Some(&path), None).unwrap();
+
+        decoder.run();
+
+        let mut eval = Evaluator::new();
+
+        for func_name in decoder.module.exported.keys() {
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(1.0)), Number::f32(Some(2.0))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 3.0);
+
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(1.1)), Number::f32(Some(2.2))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 3.3);
+
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(1.111111)), Number::f32(Some(2.222222))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 3.333333);
+
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(-1.0)), Number::f32(Some(2.0))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 1.0);
+
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(1.0)), Number::f32(Some(99999.0))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 100000.0);
+
+            let result = eval.invoke(
+                &decoder.module,
+                &func_name,
+                vec![Number::f32(Some(99999999.0)), Number::f32(Some(99999.0))],
+            );
+            assert_eq!(result.unwrap().value.f32(), 100099998.0);
         }
     }
 
@@ -394,13 +481,13 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![1]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(1))]);
             assert_eq!(result.unwrap().value.i32(), 2);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![10]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
             assert_eq!(result.unwrap().value.i32(), 20);
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![55]);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(55))]);
             assert_eq!(result.unwrap().value.i32(), 110);
         }
     }

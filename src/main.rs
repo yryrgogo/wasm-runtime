@@ -16,7 +16,10 @@ use crate::decoder::Decoder;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let (path, num_args) = get_args();
-    println!("[wasm module path]: {}", path);
+    println!(
+        "[wasm module path/args] path: {} args: {:?}",
+        path, num_args
+    );
 
     let mut decoder = Decoder::new(Some(&path), None).unwrap();
 

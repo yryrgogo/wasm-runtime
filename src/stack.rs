@@ -37,9 +37,12 @@ impl Stack {
                     num = Number::u64(Some(v));
                 }
             }
-            Float32 => todo!(),
-            Float64 => todo!(),
-            _ => unreachable!(),
+            Float32 => {
+                // Float の負の値はどうするか？
+                // そもそもなぜ Stack に負を push すべきでないかわかってないので、問題が出たら対応する
+            }
+            Float64 => {}
+            _ => unreachable!("{:?}", num.num_type),
         }
 
         self.stack.push(Instructions::Number(num));

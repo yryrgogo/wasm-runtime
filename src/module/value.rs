@@ -37,12 +37,13 @@ impl Value {
         }
     }
 
-    // pub fn f32(&self) -> f32 {
-    //     match self {
-    //         Value::Float32(v) => *v,
-    //         _ => unreachable!(),
-    //     }
-    // }
+    pub fn f32(&self) -> f32 {
+        let valid_digit = 1000000.0;
+        match self {
+            Value::Float32(v) => (*v * valid_digit).floor() / valid_digit,
+            _ => unreachable!(),
+        }
+    }
 
     // pub fn f64(&self) -> f64 {
     //     match self {

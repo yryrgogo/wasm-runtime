@@ -1,6 +1,8 @@
 use std::env;
 
-pub fn get_args() -> (String, Vec<i32>) {
+use crate::module::number::Number;
+
+pub fn get_args() -> (String, Vec<Number>) {
 	let dir_path = env::current_dir().unwrap();
 	let args: Vec<String> = env::args().collect();
 	let wasm_module_path = args.get(1).unwrap_or_else(|| {
@@ -13,8 +15,39 @@ pub fn get_args() -> (String, Vec<i32>) {
 
 	let num_args = args[2..]
 		.iter()
-		.map(|x| x.parse::<i32>().unwrap())
-		.collect::<Vec<i32>>();
+		.map(|x| -> Number {
+			let values: Vec<&str> = x.split(".").collect();
+			let result =
+		// 小数の場合
+		if values.len() > 1 {
+			// 小数点以下の指定が6桁までなら f32 とする
+			// 7桁目で1.1 + 2.2 で7桁目に揺れがあったのでこうした
+			if values.get(1).unwrap().len() <= 6 {
+				let num = x.parse::<f32>().unwrap();
+				Number::f32(Some(num))
+			} else {
+				let num = x.parse::<f64>().unwrap();
+				Number::f64(Some(num))
+			}
+		} else if x.starts_with("-") {
+			let num = x.parse::<i64>().unwrap();
+			if num < std::i32::MIN as i64 {
+				Number::i64(Some(num))
+			} else {
+				Number::i32(Some(num as i32))
+			}
+		} else {
+			let num = x.parse::<u64>().unwrap();
+			if num > std::u32::MAX as u64 {
+				Number::u64(Some(num))
+			} else {
+				Number::u32(Some(num as u32))
+			}
+		};
+
+			result
+		})
+		.collect::<Vec<Number>>();
 
 	(path, num_args)
 }
