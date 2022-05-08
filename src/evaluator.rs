@@ -45,7 +45,7 @@ impl Evaluator {
         let mut args: Vec<Number> = vec![];
 
         for (_, _) in func.func_type.parameters.iter().enumerate() {
-            let value = self.stack.pop_value().unwrap_or_else(|| {
+            let num = self.stack.pop_value().unwrap_or_else(|| {
                 panic!(
                     "
 Function のパラメータが Stack に存在しません。\n
@@ -56,18 +56,9 @@ stack: {:#?}
                 )
             });
 
-            match value.num_type {
-                NumberType::Int32 => {
-                    args.push(value);
-                }
-                NumberType::Int64 => {
-                    args.push(value);
-                }
-                NumberType::Float32 => {
-                    args.push(value);
-                }
-                NumberType::Float64 => {
-                    args.push(value);
+            match num {
+                Number::Int32(_) | Number::Int64(_) | Number::Float32(_) | Number::Float64(_) => {
+                    args.push(num);
                 }
                 _ => unreachable!(),
             };
@@ -125,7 +116,7 @@ stack: {:#?}
             .stack
             .pop_value()
             .unwrap_or_else(|| panic!("[0x04] if の条件値が存在しません。"));
-        if num.value.i32() == 0 {
+        if num == Number::Uint32(0) {
             let block_start_counter = frame.get_counter() - 1;
             let label = (*frame
                 .function
@@ -196,14 +187,11 @@ stack: {:#?}
 
     // 0x0d
     fn operate_br_if(&mut self, frame: &mut Frame) {
-        let value = self
-            .stack
-            .pop_value()
-            .unwrap_or_else(|| panic!("[0x0d] br_if の条件式に対応する値が Stack に存在しません。"))
-            .value
-            .i32();
+        let value = self.stack.pop_value().unwrap_or_else(|| {
+            panic!("[0x0d] br_if の条件式に対応する値が Stack に存在しません。")
+        });
 
-        if value == 0 {
+        if value == Number::Uint32(0) || value == Number::Int32(0) {
             self.read_u_leb128(frame);
         } else {
             self.operate_br(frame);
@@ -252,9 +240,9 @@ stack: {:#?}
     // 0x41
     fn operate_i32_const(&mut self, frame: &mut Frame) {
         let value = self.read_s_leb128(frame);
-        self.stack.push_values(Number::i32(Some(value as i32)));
+        self.stack.push_values(Number::Int32(value as i32));
 
-        println!("[i32_const] {:?}", Number::i32(Some(value as i32)));
+        println!("[i32_const] {:?}", Number::Int32(value as i32));
     }
 
     // 0x4f
@@ -268,10 +256,10 @@ stack: {:#?}
             .pop_value()
             .unwrap_or_else(|| panic!("[0x4f] 比較に必要な値1が Stack に存在しません。"));
         let result: Number;
-        if n1.value > n2.value {
-            result = Number::i32(Some(1));
+        if n1 > n2 {
+            result = Number::Int32(1);
         } else {
-            result = Number::i32(Some(0));
+            result = Number::Int32(0);
         }
 
         println!("[i32_ge_u] {:?}", result);
@@ -288,9 +276,9 @@ stack: {:#?}
             .stack
             .pop_value()
             .unwrap_or_else(|| panic!("[0x6A] 加算に必要な値1が Stack に存在しません。"));
-        let n: i32 = n1.value.i32() + n2.value.i32();
-        self.stack.push_values(Number::i32(Some(n)));
-        println!("[i32_add] {:?}", Number::i32(Some(n)));
+        let n = n1 + n2;
+        println!("[i32_add] {:?}", n);
+        self.stack.push_values(n);
     }
 
     // 0x74
@@ -303,9 +291,7 @@ stack: {:#?}
             .stack
             .pop_value()
             .unwrap_or_else(|| panic!("[0x74] 左シフトする値が Stack に存在しません。"));
-        self.stack.push_values(Number::i32(Some(
-            value.value.i32() << shift_left.value.i32(),
-        )))
+        self.stack.push_values(value << shift_left)
     }
 
     // 0x92
@@ -318,9 +304,9 @@ stack: {:#?}
             .stack
             .pop_value()
             .unwrap_or_else(|| panic!("[0x92] 加算に必要な値1が Stack に存在しません。"));
-        let n: f32 = n1.value.f32() + n2.value.f32();
-        self.stack.push_values(Number::f32(Some(n)));
-        println!("[f32_add] {:?}", Number::f32(Some(n)));
+        let n = n1 + n2;
+        println!("[f32_add] {:?}", n);
+        self.stack.push_values(n);
     }
 
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
@@ -360,20 +346,20 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(3))]);
-            assert_eq!(result.unwrap().value.i32(), 2);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(3)]);
+            assert_eq!(result.unwrap(), Number::Int32(2));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(5))]);
-            assert_eq!(result.unwrap().value.i32(), 5);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(5)]);
+            assert_eq!(result.unwrap(), Number::Int32(5));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(8))]);
-            assert_eq!(result.unwrap().value.i32(), 21);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(8)]);
+            assert_eq!(result.unwrap(), Number::Int32(21));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
-            assert_eq!(result.unwrap().value.i32(), 55);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(10)]);
+            assert_eq!(result.unwrap(), Number::Int32(55));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(20))]);
-            assert_eq!(result.unwrap().value.i32(), 6765);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(20)]);
+            assert_eq!(result.unwrap(), Number::Int32(6765));
         }
     }
 
@@ -390,30 +376,30 @@ mod evaluator_tests {
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::i32(Some(1)), Number::i32(Some(2))],
+                vec![Number::Int32(1), Number::Int32(2)],
             );
-            assert_eq!(result.unwrap().value.i32(), 3);
+            assert_eq!(result.unwrap(), Number::Int32(3));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::i32(Some(-1)), Number::i32(Some(2))],
+                vec![Number::Int32(-1), Number::Int32(2)],
             );
-            assert_eq!(result.unwrap().value.i32(), 1);
+            assert_eq!(result.unwrap(), Number::Int32(1));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::i32(Some(1)), Number::i32(Some(99999))],
+                vec![Number::Int32(1), Number::Int32(99999)],
             );
-            assert_eq!(result.unwrap().value.i32(), 100000);
+            assert_eq!(result.unwrap(), Number::Int32(100000));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::i32(Some(99999999)), Number::i32(Some(99999))],
+                vec![Number::Int32(99999999), Number::Int32(99999)],
             );
-            assert_eq!(result.unwrap().value.i32(), 100099998);
+            assert_eq!(result.unwrap(), Number::Int32(100099998));
         }
     }
 
@@ -430,44 +416,44 @@ mod evaluator_tests {
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(1.0)), Number::f32(Some(2.0))],
+                vec![Number::Float32(1.0), Number::Float32(2.0)],
             );
-            assert_eq!(result.unwrap().value.f32(), 3.0);
+            assert_eq!(result.unwrap(), Number::Float32(3.0));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(1.1)), Number::f32(Some(2.2))],
+                vec![Number::Float32(1.1), Number::Float32(2.2)],
             );
-            assert_eq!(result.unwrap().value.f32(), 3.3);
+            assert_eq!(result.unwrap(), Number::Float32(3.3));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(1.111111)), Number::f32(Some(2.222222))],
+                vec![Number::Float32(1.111111), Number::Float32(2.222222)],
             );
-            assert_eq!(result.unwrap().value.f32(), 3.333333);
+            assert_eq!(result.unwrap(), Number::Float32(3.333333));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(-1.0)), Number::f32(Some(2.0))],
+                vec![Number::Float32(-1.0), Number::Float32(2.0)],
             );
-            assert_eq!(result.unwrap().value.f32(), 1.0);
+            assert_eq!(result.unwrap(), Number::Float32(1.0));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(1.0)), Number::f32(Some(99999.0))],
+                vec![Number::Float32(1.0), Number::Float32(99999.0)],
             );
-            assert_eq!(result.unwrap().value.f32(), 100000.0);
+            assert_eq!(result.unwrap(), Number::Float32(100000.0));
 
             let result = eval.invoke(
                 &decoder.module,
                 &func_name,
-                vec![Number::f32(Some(99999999.0)), Number::f32(Some(99999.0))],
+                vec![Number::Float32(99999999.0), Number::Float32(99999.0)],
             );
-            assert_eq!(result.unwrap().value.f32(), 100099998.0);
+            assert_eq!(result.unwrap(), Number::Float32(100099998.0));
         }
     }
 
@@ -481,14 +467,14 @@ mod evaluator_tests {
         let mut eval = Evaluator::new();
 
         for func_name in decoder.module.exported.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(1))]);
-            assert_eq!(result.unwrap().value.i32(), 2);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(1)]);
+            assert_eq!(result.unwrap(), Number::Int32(2));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(10))]);
-            assert_eq!(result.unwrap().value.i32(), 20);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(10)]);
+            assert_eq!(result.unwrap(), Number::Int32(20));
 
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::i32(Some(55))]);
-            assert_eq!(result.unwrap().value.i32(), 110);
+            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(55)]);
+            assert_eq!(result.unwrap(), Number::Int32(110));
         }
     }
 }

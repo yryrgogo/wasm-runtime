@@ -1,9 +1,9 @@
-use super::value::Value;
+use std::ops::{Add, Shl};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberType {
-    Uint32,
-    Uint64,
+    // Uint32,
+    // Uint64,
     Int32,
     Int64,
     Float32,
@@ -30,46 +30,120 @@ impl NumberType {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Number {
-    pub num_type: NumberType,
-    pub value: Value,
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub enum Number {
+    Uint32(u32),
+    Uint64(u64),
+    Int32(i32),
+    Int64(i64),
+    Float32(f32),
+    Float64(f64),
 }
-impl Number {
-    pub fn new(num_type: NumberType, value: Value) -> Number {
-        Number {
-            num_type: num_type,
-            value: value,
+
+impl Add for Number {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        match self {
+            Number::Uint32(v1) => {
+                if let Number::Uint32(v2) = rhs {
+                    Number::Uint32(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Uint64(v1) => {
+                if let Number::Uint64(v2) = rhs {
+                    Number::Uint64(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int32(v1) => {
+                if let Number::Int32(v2) = rhs {
+                    Number::Int32(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int64(v1) => {
+                if let Number::Int64(v2) = rhs {
+                    Number::Int64(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Float32(v1) => {
+                if let Number::Float32(v2) = rhs {
+                    Number::Float32(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Float64(v1) => {
+                if let Number::Float64(v2) = rhs {
+                    Number::Float64(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
         }
     }
+}
 
-    pub fn u32(value: Option<u32>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Uint32, Value::Uint32(v))
-    }
-
-    pub fn u64(value: Option<u64>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Uint64, Value::Uint64(v))
-    }
-
-    pub fn i32(value: Option<i32>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Int32, Value::Int32(v))
-    }
-
-    pub fn i64(value: Option<i64>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Int64, Value::Int64(v))
-    }
-
-    pub fn f32(value: Option<f32>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Float32, Value::Float32(v))
-    }
-
-    pub fn f64(value: Option<f64>) -> Number {
-        let v = value.unwrap();
-        Number::new(NumberType::Float64, Value::Float64(v))
+impl Shl for Number {
+    type Output = Self;
+    fn shl(self, rhs: Self) -> Self::Output {
+        match self {
+            Number::Uint32(v1) => {
+                if let Number::Uint32(v2) = rhs {
+                    Number::Uint32(v1 << v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Uint64(v1) => {
+                if let Number::Uint64(v2) = rhs {
+                    Number::Uint64(v1 << v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int32(v1) => {
+                if let Number::Int32(v2) = rhs {
+                    Number::Int32(v1 << v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int64(v1) => {
+                if let Number::Int64(v2) = rhs {
+                    Number::Int64(v1 << v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Float32(v1) => {
+                unreachable!()
+            }
+            Number::Float64(v1) => {
+                unreachable!()
+            }
+        }
     }
 }
+
+// #[derive(Debug, PartialEq, Clone)]
+// struct Uint32(u32);
+// impl Uint32 {
+//     pub fn value(&self) -> u32 {
+//         self.0
+//     }
+// }
+
+// #[derive(Debug, PartialEq, Clone)]
+// struct Uint32(u32);
+// impl Uint32 {
+//     pub fn value(&self) -> u32 {
+//         self.0
+//     }
+// }

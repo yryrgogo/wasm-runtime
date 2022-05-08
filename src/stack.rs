@@ -1,9 +1,6 @@
 use crate::instructions::Instructions;
 use crate::module::function::Block;
-use crate::module::number::{
-    Number,
-    NumberType::{Float32, Float64, Int32, Int64, Uint32, Uint64},
-};
+use crate::module::number::Number;
 use crate::structure::frame::Frame;
 
 #[derive(Debug)]
@@ -24,25 +21,20 @@ impl Stack {
 
     pub fn push_values(&mut self, mut num: Number) {
         // NOTE: Stack に負の値は push しないため unsigned に変換する
-        match num.num_type {
-            Uint32 | Uint64 => {}
-            Int32 => {
-                if num.value.i32().is_negative() {
-                    let v = 2_u32.pow(31) - num.value.i32().wrapping_abs() as u32 + 2_u32.pow(31);
-                    num = Number::u32(Some(v));
+        match num {
+            Number::Uint32(_) | Number::Uint64(_) | Number::Float32(_) | Number::Float64(_) => {}
+            Number::Int32(value) => {
+                if value.is_negative() {
+                    let v = 2_u32.pow(31) - value.wrapping_abs() as u32 + 2_u32.pow(31);
+                    num = Number::Uint32(v);
                 }
             }
-            Int64 => {
-                if num.value.i64() < 0 {
-                    let v = num.value.i64() as u64 + 2_u64.pow(64);
-                    num = Number::u64(Some(v));
+            Number::Int64(value) => {
+                if value < 0 {
+                    let v = value as u64 + 2_u64.pow(64);
+                    num = Number::Uint64(v);
                 }
             }
-            Float32 => {
-                // Float の負の値はどうするか？
-                // そもそもなぜ Stack に負を push すべきでないかわかってないので、問題が出たら対応する
-            }
-            Float64 => {}
         }
 
         self.stack.push(Instructions::Number(num));
@@ -62,15 +54,15 @@ impl Stack {
         match self.stack.pop() {
             Some(instruction) => {
                 if let Instructions::Number(num) = instruction {
-                    match num.num_type {
-                        Uint32 if num.value.u32() >= (2_u32.pow(31) - 1 + 2_u32.pow(31)) => {
-                            let mut v = (num.value.u32() - 2_u32.pow(31)) as i32;
+                    match num {
+                        Number::Uint32(value) if value >= (2_u32.pow(31) - 1 + 2_u32.pow(31)) => {
+                            let mut v = (value - 2_u32.pow(31)) as i32;
                             v = v - 2_i32.pow(30) - 2_i32.pow(30);
-                            Some(Number::i32(Some(v)))
+                            Some(Number::Int32(v))
                         }
-                        Uint64 if num.value.u64() >= (2_u64.pow(63) - 1 + 2_u64.pow(63)) => {
-                            let v = num.value.u64() - 2_u64.pow(31) - 2_u64.pow(31);
-                            Some(Number::i64(Some(v as i64)))
+                        Number::Uint64(value) if value >= (2_u64.pow(63) - 1 + 2_u64.pow(63)) => {
+                            let v = value - 2_u64.pow(31) - 2_u64.pow(31);
+                            Some(Number::Int64(v as i64))
                         }
                         _ => Some(num),
                     }

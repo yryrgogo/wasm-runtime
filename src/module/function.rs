@@ -41,10 +41,10 @@ impl Function {
         self.local_vars
             .iter()
             .map(|x| match x {
-                NumberType::Int32 => Number::i32(Some(0)),
-                NumberType::Int64 => Number::i64(Some(0)),
-                NumberType::Float32 => Number::f32(Some(0.0)),
-                NumberType::Float64 => Number::f64(Some(0.0)),
+                NumberType::Int32 => Number::Int32(0),
+                NumberType::Int64 => Number::Int64(0),
+                NumberType::Float32 => Number::Float32(0.0),
+                NumberType::Float64 => Number::Float64(0.0),
                 _ => unreachable!(),
             })
             .collect::<Vec<Number>>()

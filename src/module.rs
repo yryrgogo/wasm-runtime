@@ -10,7 +10,6 @@ pub mod function_type;
 pub mod number;
 pub mod opcode;
 pub mod section;
-pub mod value;
 
 pub struct Module {
     magic_bytes: String,
