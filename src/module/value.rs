@@ -26,7 +26,7 @@ impl Value {
     pub fn i32(&self) -> i32 {
         match self {
             Value::Int32(v) => *v,
-            _ => unreachable!(),
+            _ => unreachable!("[Value::i32] {:?}", self),
         }
     }
 

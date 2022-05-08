@@ -37,11 +37,11 @@ pub fn get_args() -> (String, Vec<Number>) {
 				Number::i32(Some(num as i32))
 			}
 		} else {
-			let num = x.parse::<u64>().unwrap();
-			if num > std::u32::MAX as u64 {
-				Number::u64(Some(num))
+			let num = x.parse::<i64>().unwrap();
+			if num > std::i32::MAX as i64 {
+				Number::i64(Some(num))
 			} else {
-				Number::u32(Some(num as u32))
+				Number::i32(Some(num as i32))
 			}
 		};
 

@@ -25,6 +25,7 @@ impl Stack {
     pub fn push_values(&mut self, mut num: Number) {
         // NOTE: Stack に負の値は push しないため unsigned に変換する
         match num.num_type {
+            Uint32 | Uint64 => {}
             Int32 => {
                 if num.value.i32().is_negative() {
                     let v = 2_u32.pow(31) - num.value.i32().wrapping_abs() as u32 + 2_u32.pow(31);
@@ -42,7 +43,6 @@ impl Stack {
                 // そもそもなぜ Stack に負を push すべきでないかわかってないので、問題が出たら対応する
             }
             Float64 => {}
-            _ => unreachable!("{:?}", num.num_type),
         }
 
         self.stack.push(Instructions::Number(num));
@@ -63,12 +63,12 @@ impl Stack {
             Some(instruction) => {
                 if let Instructions::Number(num) = instruction {
                     match num.num_type {
-                        Uint32 => {
+                        Uint32 if num.value.u32() >= (2_u32.pow(31) - 1 + 2_u32.pow(31)) => {
                             let mut v = (num.value.u32() - 2_u32.pow(31)) as i32;
                             v = v - 2_i32.pow(30) - 2_i32.pow(30);
                             Some(Number::i32(Some(v)))
                         }
-                        Uint64 => {
+                        Uint64 if num.value.u64() >= (2_u64.pow(63) - 1 + 2_u64.pow(63)) => {
                             let v = num.value.u64() - 2_u64.pow(31) - 2_u64.pow(31);
                             Some(Number::i64(Some(v as i64)))
                         }
