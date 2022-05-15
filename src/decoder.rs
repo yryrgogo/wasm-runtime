@@ -1,12 +1,13 @@
 use crate::reader::{WasmBinaryReader, LEB128_MAX_BITS};
 use crate::{
     export::ExportMap,
+    import::ImportMap,
     module::{
         function::{Block, Function},
         function_type::FunctionType,
         number::NumberType,
         opcode::OpCode,
-        section::{ExportKind, SectionId, TypeSection},
+        section::{ExternalKind, SectionId, TypeSection},
         Module,
     },
 };
@@ -76,6 +77,7 @@ impl Decoder {
                 }
             }
             SectionId::TypeSectionId => self.decode_type_section(),
+            SectionId::ImportSectionId => self.decode_import_section(),
             SectionId::FunctionSectionId => self.decode_function_section(),
             SectionId::ExportSectionId => self.decode_export_section(),
             SectionId::CodeSectionId => self.decode_code_section(),
@@ -135,7 +137,7 @@ impl Decoder {
             let [result_count, _] = self.reader.read_unsigned_leb128();
 
             // NOTE: 202203時点の仕様では戻り値は1つまで
-            assert_eq!(result_count, 1);
+            assert!(result_count <= 1);
 
             for r_i in 0..result_count {
                 let value = self.decode_type().unwrap();
@@ -143,6 +145,69 @@ impl Decoder {
                 func_type.results.push(value);
             }
             self.module.function_types.push(func_type);
+        }
+    }
+
+    /// Decode ImportSection
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#import-section
+    /// ```
+    /// [
+    /// ]
+    /// ```
+    fn decode_import_section(&mut self) {
+        println!(
+            "
+#================#
+# Import Section #
+#================#
+        "
+        );
+
+        let [import_entry_count, size] = self.reader.read_unsigned_leb128();
+        println!(
+            "import entry count: {} Decoded size: {}",
+            import_entry_count, size
+        );
+
+        for i in 0..import_entry_count {
+            let [module_name_size, size] = self.reader.read_unsigned_leb128();
+            let buf = self.reader.read_bytes(module_name_size);
+            let module_name = std::str::from_utf8(&buf).unwrap();
+            println!("import module name: {}, size: {}", module_name, size);
+
+            let [field_name_size, size] = self.reader.read_unsigned_leb128();
+            let buf = self.reader.read_bytes(field_name_size);
+            let field_name = std::str::from_utf8(&buf).unwrap();
+            println!("import field name: {}, size: {}", field_name, size);
+
+            let kind = self
+                .reader
+                .read_next_byte()
+                .unwrap_or_else(|| panic!("Import Section の kind byte が見つかりません"));
+
+            let module_field_name = format!("{}.{}", module_name, field_name);
+
+            match ExternalKind::from_usize(kind).unwrap() {
+                ExternalKind::Func => {
+                    if self.module.exports.contains_key(&module_field_name) {
+                        panic!("{} key already exists", &module_field_name);
+                    }
+                    let [index, _] = self.reader.read_unsigned_leb128();
+                    let func_idx = usize::from(index);
+                    self.module.imports.insert(
+                        module_field_name,
+                        ImportMap {
+                            index: func_idx,
+                            function_type: self.module.function_types[func_idx].clone(),
+                        },
+                    );
+                }
+                ExternalKind::Table => todo!(),
+                ExternalKind::LinearMemory => todo!(),
+                ExternalKind::GlobalVariable => todo!(),
+            }
         }
     }
 
@@ -214,14 +279,14 @@ impl Decoder {
                 .read_next_byte()
                 .unwrap_or_else(|| panic!("Export Section の kind byte が見つかりません"));
 
-            match ExportKind::from_usize(kind).unwrap() {
-                ExportKind::Func => {
-                    if self.module.exported.contains_key(name) {
+            match ExternalKind::from_usize(kind).unwrap() {
+                ExternalKind::Func => {
+                    if self.module.exports.contains_key(name) {
                         panic!("{} key already exists", name);
                     }
                     let [index, _] = self.reader.read_unsigned_leb128();
                     let func_idx = usize::from(index);
-                    self.module.exported.insert(
+                    self.module.exports.insert(
                         name.to_string(),
                         ExportMap {
                             index: func_idx,
@@ -229,9 +294,9 @@ impl Decoder {
                         },
                     );
                 }
-                ExportKind::Table => todo!(),
-                ExportKind::LinearMemory => todo!(),
-                ExportKind::GlobalVariable => todo!(),
+                ExternalKind::Table => todo!(),
+                ExternalKind::LinearMemory => todo!(),
+                ExternalKind::GlobalVariable => todo!(),
             }
         }
     }
@@ -586,7 +651,7 @@ mod decode_tests {
         decoder.decode_function_section();
         decoder.decode_export_section();
 
-        for (key, export_map) in decoder.module.exported {
+        for (key, export_map) in decoder.module.exports {
             assert_eq!(key, "fib");
             assert_eq!(
                 export_map.function,

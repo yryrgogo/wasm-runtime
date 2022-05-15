@@ -1,6 +1,7 @@
 pub enum SectionId {
     CustomSectionId = 0,
     TypeSectionId = 1,
+    ImportSectionId = 2,
     FunctionSectionId = 3,
     ExportSectionId = 7,
     CodeSectionId = 10,
@@ -11,6 +12,7 @@ impl SectionId {
         match n {
             0 => Some(SectionId::CustomSectionId),
             1 => Some(SectionId::TypeSectionId),
+            2 => Some(SectionId::ImportSectionId),
             3 => Some(SectionId::FunctionSectionId),
             7 => Some(SectionId::ExportSectionId),
             10 => Some(SectionId::CodeSectionId),
@@ -29,20 +31,20 @@ impl TypeSection {
     }
 }
 
-pub enum ExportKind {
+pub enum ExternalKind {
     Func = 0x00,
     Table = 0x01,
     LinearMemory = 0x02,
     GlobalVariable = 0x03,
 }
 
-impl ExportKind {
-    pub fn from_usize(n: u8) -> Option<ExportKind> {
+impl ExternalKind {
+    pub fn from_usize(n: u8) -> Option<ExternalKind> {
         match n {
-            0 => Some(ExportKind::Func),
-            1 => Some(ExportKind::Table),
-            2 => Some(ExportKind::LinearMemory),
-            3 => Some(ExportKind::GlobalVariable),
+            0 => Some(ExternalKind::Func),
+            1 => Some(ExternalKind::Table),
+            2 => Some(ExternalKind::LinearMemory),
+            3 => Some(ExternalKind::GlobalVariable),
             _ => panic!("Invalid Export Kind {}", n),
         }
     }

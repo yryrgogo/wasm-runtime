@@ -1,4 +1,5 @@
 use crate::export::ExportMap;
+use crate::import::ImportMap;
 use std::fmt::{Debug, Formatter, Result};
 
 use self::function::Function;
@@ -16,7 +17,8 @@ pub struct Module {
     version: u8,
     pub functions: Vec<Function>,
     pub function_types: Vec<FunctionType>,
-    pub exported: HashMap<String, ExportMap>,
+    pub imports: HashMap<String, ImportMap>,
+    pub exports: HashMap<String, ExportMap>,
 }
 
 impl Default for Module {
@@ -26,7 +28,8 @@ impl Default for Module {
             version: 1,
             functions: vec![],
             function_types: vec![],
-            exported: HashMap::new(),
+            imports: HashMap::new(),
+            exports: HashMap::new(),
         }
     }
 }
@@ -40,7 +43,7 @@ functions: {:#?}
 function_types: {:#?}
 exported: {:#?}
 ",
-            self.functions, self.function_types, self.exported
+            self.functions, self.function_types, self.exports
         )
     }
 }

@@ -1,6 +1,7 @@
 mod decoder;
 mod evaluator;
 mod export;
+mod import;
 mod instructions;
 mod module;
 mod reader;
@@ -26,7 +27,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     decoder.run();
 
     let mut eval = Evaluator::new();
-    for func_name in decoder.module.exported.keys() {
+    for func_name in decoder.module.exports.keys() {
         if let Some(result) = eval.invoke(&decoder.module, func_name, num_args.clone()) {
             println!("{:#?}", result);
         } else {
