@@ -1,18 +1,25 @@
 (module
-  (import "console" "log" (func $log (param i32)))
-  (func
-    i32.const 0
+  (import "console" "log" (func $log (param i64)))
+  (import "console" "log" (func $log2 (param f64)))
+  (func (export "ifElseSimple")
+    (param $value_1 i32)
+    local.get $value_1
     (if
       (then
-        i32.const 1
+        i64.const 1
         call $log
       )
       (else
-        i32.const 0
+        i64.const 0
         call $log
       )
     )
   )
-
-  (start 1)
+  (func
+    (param $value_2 f64)
+    (result f64)
+    f64.const 0
+    call $log2
+    local.get $value_2
+  )
 )
