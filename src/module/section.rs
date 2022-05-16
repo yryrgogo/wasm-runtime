@@ -4,6 +4,7 @@ pub enum SectionId {
     ImportSectionId = 2,
     FunctionSectionId = 3,
     ExportSectionId = 7,
+    StartSectionId = 8,
     CodeSectionId = 10,
 }
 
@@ -15,8 +16,9 @@ impl SectionId {
             2 => Some(SectionId::ImportSectionId),
             3 => Some(SectionId::FunctionSectionId),
             7 => Some(SectionId::ExportSectionId),
+            8 => Some(SectionId::StartSectionId),
             10 => Some(SectionId::CodeSectionId),
-            _ => todo!(),
+            _ => todo!("{}", n),
         }
     }
 }

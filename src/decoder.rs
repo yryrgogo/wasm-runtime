@@ -63,6 +63,8 @@ impl Decoder {
 
     pub fn decode_section_body(&mut self, section_id: u8) -> Result<(), Box<dyn Error>> {
         let [section_size, decoded_size] = self.reader.read_unsigned_leb128();
+
+        println!("------------------------");
         println!(
             "Section ID: {} Size: {} Decoded Size: {}",
             section_id, section_size, decoded_size
@@ -80,8 +82,12 @@ impl Decoder {
             SectionId::ImportSectionId => self.decode_import_section(),
             SectionId::FunctionSectionId => self.decode_function_section(),
             SectionId::ExportSectionId => self.decode_export_section(),
+            SectionId::StartSectionId => self.decode_start_section(),
             SectionId::CodeSectionId => self.decode_code_section(),
+            SectionId::StartSectionId => todo!(),
         }
+
+        println!("");
 
         Ok(())
     }
@@ -152,10 +158,6 @@ impl Decoder {
     ///
     /// Reference
     /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#import-section
-    /// ```
-    /// [
-    /// ]
-    /// ```
     fn decode_import_section(&mut self) {
         println!(
             "
@@ -171,36 +173,37 @@ impl Decoder {
             import_entry_count, size
         );
 
-        for i in 0..import_entry_count {
+        for _ in 0..import_entry_count {
             let [module_name_size, size] = self.reader.read_unsigned_leb128();
             let buf = self.reader.read_bytes(module_name_size);
             let module_name = std::str::from_utf8(&buf).unwrap();
             println!("import module name: {}, size: {}", module_name, size);
 
-            let [field_name_size, size] = self.reader.read_unsigned_leb128();
-            let buf = self.reader.read_bytes(field_name_size);
-            let field_name = std::str::from_utf8(&buf).unwrap();
-            println!("import field name: {}, size: {}", field_name, size);
+            let [import_name_size, size] = self.reader.read_unsigned_leb128();
+            let buf = self.reader.read_bytes(import_name_size);
+            let import_name = std::str::from_utf8(&buf).unwrap();
+            println!("import field name: {}, size: {}", import_name, size);
 
             let kind = self
                 .reader
                 .read_next_byte()
                 .unwrap_or_else(|| panic!("Import Section の kind byte が見つかりません"));
 
-            let module_field_name = format!("{}.{}", module_name, field_name);
+            let module_import_name = format!("{}.{}", module_name, import_name);
 
             match ExternalKind::from_usize(kind).unwrap() {
                 ExternalKind::Func => {
-                    if self.module.exports.contains_key(&module_field_name) {
-                        panic!("{} key already exists", &module_field_name);
+                    if self.module.exports.contains_key(&module_import_name) {
+                        panic!("{} key already exists", &module_import_name);
                     }
-                    let [index, _] = self.reader.read_unsigned_leb128();
-                    let func_idx = usize::from(index);
+                    let [func_index, _] = self.reader.read_unsigned_leb128();
+                    println!("import function index: {}", func_index);
+
                     self.module.imports.insert(
-                        module_field_name,
+                        module_import_name,
                         ImportMap {
-                            index: func_idx,
-                            function_type: self.module.function_types[func_idx].clone(),
+                            index: func_index,
+                            function_type: self.module.function_types[func_index].clone(),
                         },
                     );
                 }
@@ -231,13 +234,22 @@ impl Decoder {
         "
         );
 
-        let [function_count, _] = self.reader.read_unsigned_leb128();
-        println!("function count: {}", function_count);
+        if self.module.imports.len() > 0 {
+            for i in 0..self.module.imports.len() {
+                let func_type = self.module.function_types[i].clone();
+                self.module
+                    .functions
+                    .push(Function::new(func_type, Some(self.module.functions.len())))
+            }
+        }
 
-        for i in 0..function_count {
-            // TODO: 取得したインデックスを使うべきか？
-            let [_, _] = self.reader.read_unsigned_leb128();
-            let func_type = self.module.function_types[i].clone();
+        let [local_function_count, _] = self.reader.read_unsigned_leb128();
+        println!("local function count: {}", local_function_count);
+
+        for _ in 0..local_function_count {
+            let [func_index, _] = self.reader.read_unsigned_leb128();
+            println!("function index: {}", func_index);
+            let func_type = self.module.function_types[func_index].clone();
             self.module
                 .functions
                 .push(Function::new(func_type, Some(self.module.functions.len())))
@@ -255,6 +267,7 @@ impl Decoder {
     ///  export count,
     ///  export name size,
     ///  export kind （Export される値のタイプ）,
+    ///  TODO: この index は Function Section で定義されている index と異なる。ここで返される index は import function の数 +1（0始まりなので、import function が3つあれば3になる）になっているっぽい？怪しいのでいろいろな wat を変換しながら検証に必要あり
     ///  export kind index （Export される値のインデックス。Function の場合は Function の index）
     /// ]
     /// ```
@@ -284,13 +297,24 @@ impl Decoder {
                     if self.module.exports.contains_key(name) {
                         panic!("{} key already exists", name);
                     }
-                    let [index, _] = self.reader.read_unsigned_leb128();
-                    let func_idx = usize::from(index);
+
+                    // TODO: 要検証部分 export index の定義がよくわかってない
+                    let [export_func_idx, _] = self.reader.read_unsigned_leb128();
+                    let func_idx = 0;
+                    println!("export function index: {}", export_func_idx);
+
                     self.module.exports.insert(
                         name.to_string(),
                         ExportMap {
                             index: func_idx,
-                            function: self.module.functions[func_idx].clone(),
+                            function: self
+                                .module
+                                .functions
+                                .get(func_idx)
+                                .unwrap_or_else(|| {
+                                    panic!("function index: {} name: {}", func_idx, name)
+                                })
+                                .clone(),
                         },
                     );
                 }
@@ -299,6 +323,25 @@ impl Decoder {
                 ExternalKind::GlobalVariable => todo!(),
             }
         }
+    }
+
+    /// Start Section
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#start-section
+    /// ```
+    fn decode_start_section(&mut self) {
+        println!(
+            "
+#===============#
+# Start Section #
+#===============#
+        "
+        );
+
+        let [index, _] = self.reader.read_unsigned_leb128();
+
+        println!("Start Index: {}", index);
     }
 
     /// Code Section

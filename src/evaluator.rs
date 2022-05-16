@@ -41,7 +41,11 @@ impl Evaluator {
     }
 
     fn call(&mut self, module: &Module, func_idx: usize) {
-        let func = module.functions.get(func_idx).unwrap().clone();
+        let func = module
+            .functions
+            .get(func_idx)
+            .unwrap_or_else(|| panic!("not found function index: {}", func_idx))
+            .clone();
         let mut args: Vec<Number> = vec![];
 
         for (_, _) in func.func_type.parameters.iter().enumerate() {
@@ -73,6 +77,8 @@ stack: {:#?}
                 Some(0x02) => self.operate_block(frame),
                 Some(0x03) => self.operate_block(frame),
                 Some(0x04) => self.operate_if(frame),
+                Some(0x05) => self.operate_else(frame),
+                Some(0x10) => self.operate_call(frame),
                 Some(0x0b) => self.operate_end(frame),
                 Some(0x0c) => self.operate_br(frame),
                 Some(0x0d) => self.operate_br_if(frame),
@@ -81,6 +87,7 @@ stack: {:#?}
                 Some(0x22) => self.operate_local_tee(frame),
                 Some(0x40) => self.operate_grow_memory(),
                 Some(0x41) => self.operate_i32_const(frame),
+                Some(0x42) => self.operate_i64_const(frame),
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
                 Some(0x74) => self.operate_i32_shl(),
@@ -101,12 +108,17 @@ stack: {:#?}
             .function
             .blocks
             .get(&block_start_counter)
-            .unwrap_or_else(|| panic!("# [operate_block] Label の取得に失敗しました。]")))
+            .unwrap_or_else(|| {
+                panic!(
+                    "[operate_block] Label の取得に失敗しました。 counter: {}]",
+                    block_start_counter
+                )
+            }))
         .clone();
 
         // start_idx は 0x02 オペコードを指しており、次は arity のため2つ飛ばす
         frame.set_counter(label.start_idx + 2);
-        println!("# [operate_block] Label {:?}", label);
+        println!("[operate_block] Label {:?}", label);
         self.stack.push_label(label);
     }
 
@@ -122,15 +134,24 @@ stack: {:#?}
                 .function
                 .blocks
                 .get(&block_start_counter)
-                .unwrap_or_else(|| panic!("# [operate_if] Label の取得に失敗しました。")))
+                .unwrap_or_else(|| panic!("[operate_if] Label の取得に失敗しました。")))
             .clone();
 
             frame.set_counter(label.end_idx + 1);
         } else {
             self.operate_block(frame);
         }
+    }
 
-        println!("[if] {:?}", num);
+    // 0x05
+    fn operate_else(&mut self, frame: &mut Frame) {
+        println!("[operate_else]");
+    }
+
+    // 0x10
+    fn operate_call(&mut self, frame: &mut Frame) {
+        let func_idx = self.read_u_leb128(frame);
+        println!("[call] call function index: {}", func_idx);
     }
 
     // 0x0b
@@ -234,7 +255,7 @@ stack: {:#?}
         todo!("");
         // let size = self.read_u_leb128(frame);
         // TODO:
-        // println!("# [operate_grow_memory]grow {} memory", size)
+        // println!("[operate_grow_memory]grow {} memory", size)
     }
 
     // 0x41
@@ -243,6 +264,14 @@ stack: {:#?}
         self.stack.push_values(Number::Int32(value as i32));
 
         println!("[i32_const] {:?}", Number::Int32(value as i32));
+    }
+
+    // 0x42
+    fn operate_i64_const(&mut self, frame: &mut Frame) {
+        let value = self.read_s_leb128(frame);
+        self.stack.push_values(Number::Int64(value as i64));
+
+        println!("[i64_const] {:?}", Number::Int64(value as i64));
     }
 
     // 0x4f
@@ -488,9 +517,10 @@ mod evaluator_tests {
 
         let mut eval = Evaluator::new();
 
-        for func_name in decoder.module.exports.keys() {
-            let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(1)]);
-            assert_eq!(result.unwrap(), Number::Int32(0));
-        }
+        println!("{:#?}", decoder.module);
+        // for func_name in decoder.module.exports.keys() {
+        //     let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(0)]);
+        //     assert_eq!(result.unwrap(), Number::Int32(100));
+        // }
     }
 }
