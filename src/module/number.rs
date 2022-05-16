@@ -36,8 +36,9 @@ pub enum Number {
     Uint64(u64),
     Int32(i32),
     Int64(i64),
-    Float32(f32),
-    Float64(f64),
+    // Float https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#constants-described-here
+    Float32(u32),
+    Float64(u64),
 }
 
 impl Add for Number {

@@ -43,8 +43,8 @@ impl Function {
             .map(|x| match x {
                 NumberType::Int32 => Number::Int32(0),
                 NumberType::Int64 => Number::Int64(0),
-                NumberType::Float32 => Number::Float32(0.0),
-                NumberType::Float64 => Number::Float64(0.0),
+                NumberType::Float32 => Number::Float32(0),
+                NumberType::Float64 => Number::Float64(0),
                 _ => unreachable!(),
             })
             .collect::<Vec<Number>>()

@@ -10,16 +10,9 @@
         call $log
       )
       (else
-        i64.const 0
-        call $log
+        f64.const 0
+        call $log2
       )
     )
-  )
-  (func
-    (param $value_2 f64)
-    (result f64)
-    f64.const 0
-    call $log2
-    local.get $value_2
   )
 )

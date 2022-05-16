@@ -24,10 +24,12 @@ pub fn get_args() -> (String, Vec<Number>) {
 			// 7桁目で1.1 + 2.2 で7桁目に揺れがあったのでこうした
 			if values.get(1).unwrap().len() <= 6 {
 				let num = x.parse::<f32>().unwrap();
-				Number::Float32(num)
+				// TODO: f32 を u32 に変換する
+				Number::Float32(num as u32)
 			} else {
 				let num = x.parse::<f64>().unwrap();
-				Number::Float64(num)
+				// TODO: f64 を u64 に変換する
+				Number::Float64(num as u64)
 			}
 		} else if x.starts_with("-") {
 			let num = x.parse::<i64>().unwrap();
