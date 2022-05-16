@@ -1,6 +1,6 @@
 (module
   (import "console" "log" (func $log (param i64)))
-  (import "console" "log" (func $log2 (param f64)))
+  (import "console" "log" (func $log2 (param i32)))
   (func (export "ifElseSimple")
     (param $value_1 i32)
     local.get $value_1
@@ -10,7 +10,7 @@
         call $log
       )
       (else
-        f64.const 0
+        i32.const 0
         call $log2
       )
     )

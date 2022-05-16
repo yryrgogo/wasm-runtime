@@ -435,12 +435,15 @@ impl Decoder {
             match self.find_next_structured_instruction(&mut bytecodes) {
                 Some(structured_instruction) => {
                     let idx = self.module.functions[func_idx].bytecodes.len() - bytecodes.len() - 1;
-                    println!("expression idx:{}", idx);
+                    println!("expression idx: {}", idx);
                     match OpCode::from_byte(structured_instruction) {
                         OpCode::End => {
                             let mut block = block_stack.pop().unwrap();
                             block.end_idx = idx;
                             blocks.insert(block.start_idx, block);
+                        }
+                        OpCode::Unreachable => {
+                            break;
                         }
                         op => {
                             println!("structured Instruction OpCode: {:?}", op);
@@ -502,8 +505,10 @@ impl Decoder {
                 }
                 OpCode::I32Const | OpCode::I64Const | OpCode::F32Const | OpCode::F64Const => {
                     println!("OpCode: {:x} Const", byte);
+                    // TODO: f32を定義すると4byte, f64を定義すると8byteが後ろに続くっぽい？ https://github.com/WebAssembly/design/blob/main/Semantics.md#floating-point-operators
                     Decoder::decode_signed_leb128(bytecodes);
                 }
+                OpCode::Unreachable => unreachable!("OpCode: {:?}", OpCode::Unreachable),
                 _ => {}
             };
         }
