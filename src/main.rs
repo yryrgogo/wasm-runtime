@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut eval = Evaluator::new();
     for func_name in decoder.module.exports.keys() {
+        println!("eval functions: {}", func_name);
         if let Some(result) = eval.invoke(&decoder.module, func_name, num_args.clone()) {
             println!("{:#?}", result);
         } else {

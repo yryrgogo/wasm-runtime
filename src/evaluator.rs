@@ -1,4 +1,4 @@
-use crate::module::number::{Number, NumberType};
+use crate::module::number::Number;
 use crate::structure::frame::Frame;
 use crate::util::leb::read_signed_leb128;
 use crate::util::leb::read_unsigned_leb128;
@@ -26,6 +26,7 @@ impl Evaluator {
         }
 
         let func_idx = module.exports.get(func_name).unwrap().index;
+        println!("Function name: {}, index: {}", func_name, func_idx);
         self.call(module, func_idx);
 
         loop {
@@ -52,7 +53,7 @@ impl Evaluator {
             let num = self.stack.pop_value().unwrap_or_else(|| {
                 panic!(
                     "
-Function のパラメータが Stack に存在しません。\n
+Function のパラメータが Stack に存在しません。
 function type: {:#?}
 stack: {:#?}
 ",
@@ -82,6 +83,7 @@ stack: {:#?}
                 Some(0x0b) => self.operate_end(frame),
                 Some(0x0c) => self.operate_br(frame),
                 Some(0x0d) => self.operate_br_if(frame),
+                Some(0x0f) => self.operate_return(frame),
                 Some(0x20) => self.operate_local_get(frame),
                 Some(0x21) => self.operate_local_set(frame),
                 Some(0x22) => self.operate_local_tee(frame),
@@ -89,7 +91,7 @@ stack: {:#?}
                 Some(0x41) => self.operate_i32_const(frame),
                 Some(0x42) => self.operate_i64_const(frame),
                 Some(0x44) => self.operate_f64_const(frame),
-                Some(0x46) => self.operate_i32_eq(frame),
+                Some(0x46) => self.operate_i32_eq(),
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
                 Some(0x70) => self.operate_i32_rem_u(),
@@ -148,7 +150,7 @@ stack: {:#?}
 
     // 0x05
     fn operate_else(&mut self, frame: &mut Frame) {
-        println!("[operate_else]");
+        println!("[operate_else] ${:#?}", frame);
     }
 
     // 0x10
@@ -223,6 +225,11 @@ stack: {:#?}
         }
     }
 
+    // 0x0f
+    fn operate_return(&mut self, frame: &mut Frame) {
+        self.operate_end(frame);
+    }
+
     // 0x20
     fn operate_local_get(&mut self, frame: &mut Frame) {
         let local_idx = self.read_u_leb128(frame);
@@ -287,7 +294,7 @@ stack: {:#?}
     }
 
     // 0x46
-    fn operate_i32_eq(&mut self, frame: &mut Frame) {
+    fn operate_i32_eq(&mut self) {
         let right = self
             .stack
             .pop_value()
