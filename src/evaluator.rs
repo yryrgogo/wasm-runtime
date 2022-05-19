@@ -83,7 +83,10 @@ stack: {:#?}
                 Some(0x0b) => self.operate_end(frame),
                 Some(0x0c) => self.operate_br(frame),
                 Some(0x0d) => self.operate_br_if(frame),
-                Some(0x0f) => self.operate_return(frame),
+                Some(0x0f) => {
+                    self.operate_return();
+                    break;
+                }
                 Some(0x20) => self.operate_local_get(frame),
                 Some(0x21) => self.operate_local_set(frame),
                 Some(0x22) => self.operate_local_tee(frame),
@@ -168,12 +171,12 @@ stack: {:#?}
             return;
         }
 
-        let value = self.stack.pop_value();
-        println!("#[operate_end] Result: {:#?}", value);
+        let return_value = self.stack.pop_value();
+        println!("#[operate_end] Result: {:#?}", return_value);
         println!("#[operate_end] Stack: {:#?}", self.stack);
         if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
             self.stack.pop_current_frame();
-            if let Some(result) = value {
+            if let Some(result) = return_value {
                 self.stack.push_values(result);
             }
         } else {
@@ -226,8 +229,22 @@ stack: {:#?}
     }
 
     // 0x0f
-    fn operate_return(&mut self, frame: &mut Frame) {
-        self.operate_end(frame);
+    fn operate_return(&mut self) {
+        let return_value = self.stack.pop_value();
+        println!("#[operate_return] Result: {:#?}", &return_value);
+
+        self.stack.pop_current_frame();
+        if let Some(result) = return_value {
+            self.stack.push_values(result);
+        }
+        // let last_frame_position = self
+        //     .stack
+        //     .frame_positions
+        //     .last()
+        //     .unwrap_or_else(|| panic!("[operate_return] Frame が Stack に存在しません。"));
+        // for _ in 0..(self.stack.stack.len() - last_frame_position) {
+        //     self.stack.pop_value();
+        // }
     }
 
     // 0x20
