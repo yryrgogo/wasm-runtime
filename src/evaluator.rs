@@ -89,8 +89,10 @@ stack: {:#?}
                 Some(0x41) => self.operate_i32_const(frame),
                 Some(0x42) => self.operate_i64_const(frame),
                 Some(0x44) => self.operate_f64_const(frame),
+                Some(0x46) => self.operate_i32_eq(frame),
                 Some(0x4f) => self.operate_i32_ge_u(),
                 Some(0x6A) => self.operate_i32_add(),
+                Some(0x70) => self.operate_i32_rem_u(),
                 Some(0x74) => self.operate_i32_shl(),
                 Some(0x92) => self.operate_f32_add(),
                 Some(opcode) => {
@@ -284,18 +286,39 @@ stack: {:#?}
         println!("[f64_const] {:?}", Number::Float64(value as u64));
     }
 
+    // 0x46
+    fn operate_i32_eq(&mut self, frame: &mut Frame) {
+        let right = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x46] 右値が Stack に存在しません。"));
+        let left = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x46] 左値が Stack に存在しません。"));
+        let result: Number;
+        if left == right {
+            result = Number::Int32(1);
+        } else {
+            result = Number::Int32(0);
+        }
+
+        println!("[i32_eq] {:?}", result);
+        self.stack.push_values(result);
+    }
+
     // 0x4f
     fn operate_i32_ge_u(&mut self) {
-        let n2 = self
+        let right = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x4f] 比較に必要な値2が Stack に存在しません。"));
-        let n1 = self
+            .unwrap_or_else(|| panic!("[0x4f] 右値が Stack に存在しません。"));
+        let left = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x4f] 比較に必要な値1が Stack に存在しません。"));
+            .unwrap_or_else(|| panic!("[0x4f] 左値が Stack に存在しません。"));
         let result: Number;
-        if n1 > n2 {
+        if left > right {
             result = Number::Int32(1);
         } else {
             result = Number::Int32(0);
@@ -307,17 +330,32 @@ stack: {:#?}
 
     // 0x6A
     fn operate_i32_add(&mut self) {
-        let n2 = self
+        let right = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x6A] 加算に必要な値2が Stack に存在しません。"));
-        let n1 = self
+            .unwrap_or_else(|| panic!("[0x6A] 右値が Stack に存在しません。"));
+        let left = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x6A] 加算に必要な値1が Stack に存在しません。"));
-        let n = n1 + n2;
-        println!("[i32_add] {:?}", n);
-        self.stack.push_values(n);
+            .unwrap_or_else(|| panic!("[0x6A] 左値が Stack に存在しません。"));
+        let result = left + right;
+        println!("[i32_add] {:?}", result);
+        self.stack.push_values(result);
+    }
+
+    // 0x70
+    fn operate_i32_rem_u(&mut self) {
+        let right = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x70] 右値が Stack に存在しません。"));
+        let left = self
+            .stack
+            .pop_value()
+            .unwrap_or_else(|| panic!("[0x70] 左値が Stack に存在しません。"));
+        let result = left % right;
+        println!("[i32_rem_u] {:?}", &result);
+        self.stack.push_values(result)
     }
 
     // 0x74
@@ -335,17 +373,17 @@ stack: {:#?}
 
     // 0x92
     fn operate_f32_add(&mut self) {
-        let n2 = self
+        let right = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x92] 加算に必要な値2が Stack に存在しません。"));
-        let n1 = self
+            .unwrap_or_else(|| panic!("[0x92] 左値が Stack に存在しません。"));
+        let left = self
             .stack
             .pop_value()
-            .unwrap_or_else(|| panic!("[0x92] 加算に必要な値1が Stack に存在しません。"));
-        let n = n1 + n2;
-        println!("[f32_add] {:?}", n);
-        self.stack.push_values(n);
+            .unwrap_or_else(|| panic!("[0x92] 右値が Stack に存在しません。"));
+        let result = left + right;
+        println!("[f32_add] {:?}", &result);
+        self.stack.push_values(result);
     }
 
     fn read_u_leb128(&mut self, frame: &mut Frame) -> usize {
