@@ -54,6 +54,13 @@ impl Decoder {
                 None => break,
             }
         }
+
+        // FIXME: Export Section 時点では関数の内容がデコードされていないため、Code Section 完了後に無理やり置き換えている。
+        // exports には可変参照を格納して、Code Section で順次書き換えていけるとよいのだが、Lifetime を解決できず断念
+        for (_, export_map) in &mut self.module.exports {
+            export_map.function = self.module.functions[export_map.index].clone();
+        }
+
         println!("\n# Section Decode Complete!\n");
     }
 
@@ -300,19 +307,18 @@ impl Decoder {
 
                     // TODO: 要検証部分 export index の定義がよくわかってない
                     let [export_func_idx, _] = self.reader.read_unsigned_leb128();
-                    let func_idx = 0;
                     println!("export function index: {}", export_func_idx);
 
                     self.module.exports.insert(
                         name.to_string(),
                         ExportMap {
-                            index: func_idx,
+                            index: export_func_idx,
                             function: self
                                 .module
                                 .functions
-                                .get(func_idx)
+                                .get(export_func_idx)
                                 .unwrap_or_else(|| {
-                                    panic!("function index: {} name: {}", func_idx, name)
+                                    panic!("function index: {} name: {}", export_func_idx, name)
                                 })
                                 .clone(),
                         },
