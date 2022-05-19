@@ -508,7 +508,6 @@ impl Decoder {
                     // TODO: f32を定義すると4byte, f64を定義すると8byteが後ろに続くっぽい？ https://github.com/WebAssembly/design/blob/main/Semantics.md#floating-point-operators
                     Decoder::decode_signed_leb128(bytecodes);
                 }
-                OpCode::Unreachable => unreachable!("OpCode: {:?}", OpCode::Unreachable),
                 _ => {}
             };
         }

@@ -24,6 +24,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut decoder = Decoder::new(Some(&path), None).unwrap();
 
+    // wasm binary の bytecode を確認する
+    // let mut cnt = 0;
+    // loop {
+    //     let byte = decoder.reader.read_next_byte().unwrap();
+    //     println!("{:03}: {:x}", cnt, byte);
+    //     cnt += 1;
+    // }
+
     decoder.run();
 
     let mut eval = Evaluator::new();

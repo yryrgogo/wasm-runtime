@@ -166,6 +166,7 @@ stack: {:#?}
 
         let value = self.stack.pop_value();
         println!("#[operate_end] Result: {:#?}", value);
+        println!("#[operate_end] Stack: {:#?}", self.stack);
         if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
             self.stack.pop_current_frame();
             if let Some(result) = value {
@@ -518,19 +519,20 @@ mod evaluator_tests {
         }
     }
 
-    #[test]
-    fn can_evaluate_if_else_simple() {
-        let path = "src/wasm/if-else/ifElseSimple.wasm".to_string();
-        let mut decoder = Decoder::new(Some(&path), None).unwrap();
+    // 外部からインポートしたモジュールをどう wasm で呼ぶのかわからず断念。モジュールの実行バイナリが渡される訳ではなさそうだが？
+    // #[test]
+    // fn can_evaluate_if_else_simple() {
+    //     let path = "src/wasm/if-else/ifElseSimple.wasm".to_string();
+    //     let mut decoder = Decoder::new(Some(&path), None).unwrap();
 
-        decoder.run();
+    //     decoder.run();
 
-        let mut eval = Evaluator::new();
+    //     let mut eval = Evaluator::new();
 
-        println!("{:#?}", decoder.module);
-        // for func_name in decoder.module.exports.keys() {
-        //     let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(0)]);
-        //     assert_eq!(result.unwrap(), Number::Int32(100));
-        // }
-    }
+    //     println!("{:#?}", decoder.module);
+    //     for func_name in decoder.module.exports.keys() {
+    //         let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(0)]);
+    //         assert_eq!(result.unwrap(), Number::Int32(100));
+    //     }
+    // }
 }
