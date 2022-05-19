@@ -1,4 +1,4 @@
-use std::ops::{Add, Shl};
+use std::ops::{Add, Rem, Shl};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberType {
@@ -83,6 +83,56 @@ impl Add for Number {
             Number::Float64(v1) => {
                 if let Number::Float64(v2) = rhs {
                     Number::Float64(v1 + v2)
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+
+impl Rem for Number {
+    type Output = Self;
+    fn rem(self, rhs: Self) -> Self::Output {
+        match self {
+            Number::Uint32(v1) => {
+                if let Number::Uint32(v2) = rhs {
+                    Number::Uint32(v1 % v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Uint64(v1) => {
+                if let Number::Uint64(v2) = rhs {
+                    Number::Uint64(v1 % v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int32(v1) => {
+                if let Number::Int32(v2) = rhs {
+                    Number::Int32(v1 % v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Int64(v1) => {
+                if let Number::Int64(v2) = rhs {
+                    Number::Int64(v1 % v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Float32(v1) => {
+                if let Number::Float32(v2) = rhs {
+                    Number::Float32(v1 % v2)
+                } else {
+                    unreachable!()
+                }
+            }
+            Number::Float64(v1) => {
+                if let Number::Float64(v2) = rhs {
+                    Number::Float64(v1 % v2)
                 } else {
                     unreachable!()
                 }
