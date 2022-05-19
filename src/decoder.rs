@@ -247,9 +247,9 @@ impl Decoder {
         println!("local function count: {}", local_function_count);
 
         for _ in 0..local_function_count {
-            let [func_index, _] = self.reader.read_unsigned_leb128();
-            println!("function index: {}", func_index);
-            let func_type = self.module.function_types[func_index].clone();
+            let [func_type_index, _] = self.reader.read_unsigned_leb128();
+            println!("function type index: {}", func_type_index);
+            let func_type = self.module.function_types[func_type_index].clone();
             self.module
                 .functions
                 .push(Function::new(func_type, Some(self.module.functions.len())))
@@ -418,14 +418,14 @@ impl Decoder {
     }
 
     fn analyze_code_section_function_body_code(&mut self, func_idx: usize) {
+        let func = self
+            .module
+            .functions
+            .get(func_idx)
+            .unwrap_or_else(|| panic!("index {} の関数が見つかりません。", func_idx));
         let mut bytecodes = self.module.functions[func_idx].bytecodes.clone();
         let mut blocks: HashMap<usize, Block> = HashMap::new();
-        let mut block_stack = vec![Block::new(
-            2,
-            self.module.function_types[func_idx].results.clone(),
-            0,
-            None,
-        )];
+        let mut block_stack = vec![Block::new(2, func.func_type.results.clone(), 0, None)];
 
         bytecodes.reverse();
         loop {
