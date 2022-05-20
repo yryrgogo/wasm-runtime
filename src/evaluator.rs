@@ -27,27 +27,17 @@ impl Evaluator {
 
         let func_idx = module.exports.get(func_name).unwrap().index;
         println!("Function name: {}, index: {}", func_name, func_idx);
-        self.call(module, func_idx);
-
-        loop {
-            match self.stack.current_frame() {
-                Some(ref mut f) => {
-                    self.execute(f);
-                }
-                None => break,
-            }
-        }
-
-        self.stack.pop_value()
+        self.call(module, func_idx)
     }
 
-    fn call(&mut self, module: &Module, func_idx: usize) {
+    fn call(&mut self, module: &Module, func_idx: usize) -> Option<Number> {
         let func = module
             .functions
             .get(func_idx)
             .unwrap_or_else(|| panic!("not found function index: {}", func_idx))
             .clone();
         let mut args: Vec<Number> = vec![];
+        println!("[call] callee function: {:#?}", func);
 
         for (_, _) in func.func_type.parameters.iter().enumerate() {
             let num = self.stack.pop_value().unwrap_or_else(|| {
@@ -69,17 +59,32 @@ stack: {:#?}
             };
         }
         args.reverse();
-        self.stack.push_frame(Frame::new(func, args))
+
+        self.stack.push_frame(Frame::new(func, args));
+
+        loop {
+            match self.stack.current_frame() {
+                Some(ref mut f) => {
+                    self.execute(module, f);
+                }
+                None => break,
+            }
+        }
+
+        self.stack.pop_value()
     }
 
-    fn execute(&mut self, frame: &mut Frame) {
+    fn execute(&mut self, module: &Module, frame: &mut Frame) {
         loop {
-            match self.stack.next_opcode(frame) {
+            let opcode = self.stack.next_opcode(frame);
+
+            // println!("opcode: {:?}, counter: {}", opcode, frame.get_counter());
+            match opcode {
                 Some(0x02) => self.operate_block(frame),
                 Some(0x03) => self.operate_block(frame),
                 Some(0x04) => self.operate_if(frame),
                 Some(0x05) => self.operate_else(frame),
-                Some(0x10) => self.operate_call(frame),
+                Some(0x10) => self.operate_call(module, frame),
                 Some(0x0b) => self.operate_end(frame),
                 Some(0x0c) => self.operate_br(frame),
                 Some(0x0d) => self.operate_br_if(frame),
@@ -136,7 +141,7 @@ stack: {:#?}
             .stack
             .pop_value()
             .unwrap_or_else(|| panic!("[0x04] if の条件値が存在しません。"));
-        if num == Number::Uint32(0) {
+        if num == Number::Int32(0) {
             let block_start_counter = frame.get_counter() - 1;
             let label = (*frame
                 .function
@@ -156,12 +161,6 @@ stack: {:#?}
         println!("[operate_else] ${:#?}", frame);
     }
 
-    // 0x10
-    fn operate_call(&mut self, frame: &mut Frame) {
-        let func_idx = self.read_u_leb128(frame);
-        println!("[call] call function index: {}", func_idx);
-    }
-
     // 0x0b
     fn operate_end(&mut self, frame: &Frame) {
         let counter = frame.get_counter();
@@ -173,7 +172,6 @@ stack: {:#?}
 
         let return_value = self.stack.pop_value();
         println!("#[operate_end] Result: {:#?}", return_value);
-        println!("#[operate_end] Stack: {:#?}", self.stack);
         if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
             self.stack.pop_current_frame();
             if let Some(result) = return_value {
@@ -245,6 +243,18 @@ stack: {:#?}
         // for _ in 0..(self.stack.stack.len() - last_frame_position) {
         //     self.stack.pop_value();
         // }
+    }
+
+    // 0x10
+    fn operate_call(&mut self, module: &Module, frame: &mut Frame) {
+        let func_idx = self.read_u_leb128(frame);
+        println!("[call] call function index: {}", func_idx);
+
+        // Frame が既に存在する場合、counter を保持するため current_frame を上書きする
+        // current_frame は最初に push された frame を clone して返しているため、初期状態のままになっている（&mut で返すようにするのは lifetime 解決が難しく断念）
+        self.stack.update_current_frame(frame.clone());
+
+        self.call(module, func_idx);
     }
 
     // 0x20

@@ -149,4 +149,9 @@ impl Stack {
         };
         label.clone()
     }
+
+    pub fn update_current_frame(&mut self, frame: Frame) {
+        let frame_idx = self.frame_positions.last().unwrap_or_else(|| panic!(""));
+        self.stack[*frame_idx] = Instructions::Frame(frame);
+    }
 }
