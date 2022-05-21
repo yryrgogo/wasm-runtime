@@ -88,6 +88,7 @@ impl Decoder {
             SectionId::TypeSectionId => self.decode_type_section(),
             SectionId::ImportSectionId => self.decode_import_section(),
             SectionId::FunctionSectionId => self.decode_function_section(),
+            SectionId::GlobalSectionId => self.decode_global_section(),
             SectionId::ExportSectionId => self.decode_export_section(),
             SectionId::StartSectionId => self.decode_start_section(),
             SectionId::CodeSectionId => self.decode_code_section(),
@@ -261,6 +262,28 @@ impl Decoder {
                 .functions
                 .push(Function::new(func_type, Some(self.module.functions.len())))
         }
+    }
+
+    /// Global Section
+    ///
+    /// Reference
+    /// - https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md#global-section
+    /// - https://webassembly.github.io/spec/core/binary/modules.html#global-section
+    ///
+    /// ```
+    /// [
+    ///  function count,
+    ///  function type index,
+    /// ]
+    /// ```
+    fn decode_global_section(&mut self) {
+        println!(
+            "
+#==================#
+# Global Section #
+#==================#
+        "
+        );
     }
 
     /// Export Section

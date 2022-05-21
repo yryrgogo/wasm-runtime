@@ -59,6 +59,7 @@
         br_if $not_prime
         br $prime_test_loop
       )
+
     )
     i32.const 0
   )
