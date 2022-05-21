@@ -50,6 +50,7 @@ impl Evaluator {
             results.push(n);
         }
         self.stack.pop_current_frame();
+        results.reverse();
         for n in results {
             self.stack.push_values(n);
         }
@@ -574,6 +575,31 @@ mod evaluator_tests {
 
             let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(55)]);
             assert_eq!(result.unwrap(), Number::Int32(110));
+        }
+    }
+
+    #[test]
+    fn can_evaluate_prime_test() {
+        let path = "src/wasm/math/isPrime.wasm".to_string();
+        let mut decoder = Decoder::new(Some(&path), None).unwrap();
+
+        decoder.run();
+
+        let mut eval = Evaluator::new();
+
+        for func_name in decoder.module.exports.keys() {
+            for n in vec![1, 4, 8, 12, 20, 30, 33, 44, 55, 66, 77, 88, 99] {
+                let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(n)]);
+                assert_eq!(result.unwrap(), Number::Int32(0));
+            }
+
+            for n in vec![
+                2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79,
+                83, 89, 97,
+            ] {
+                let result = eval.invoke(&decoder.module, &func_name, vec![Number::Int32(n)]);
+                assert_eq!(result.unwrap(), Number::Int32(1));
+            }
         }
     }
 
