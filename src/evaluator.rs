@@ -79,6 +79,7 @@ impl Evaluator {
                 Some(0x20) => self.operate_local_get(frame),
                 Some(0x21) => self.operate_local_set(frame),
                 Some(0x22) => self.operate_local_tee(frame),
+                Some(0x23) => self.operate_global_get(module, frame),
                 Some(0x40) => self.operate_grow_memory(),
                 Some(0x41) => self.operate_i32_const(frame),
                 Some(0x42) => self.operate_i64_const(frame),
@@ -240,6 +241,24 @@ impl Evaluator {
         frame.local_vars[local_idx] = self.stack.peek();
 
         println!("[local_tee] {:?}", frame.local_vars[local_idx]);
+    }
+
+    // 0x23
+    fn operate_global_get(&mut self, module: &Module, frame: &mut Frame) {
+        let global_idx = self.read_u_leb128(frame);
+        let global_var = module
+            .global_vars
+            .get(global_idx as usize)
+            .unwrap_or_else(|| {
+                panic!(
+                    "[0x23] global var {} にセットする値が Stack に存在しません。",
+                    global_idx
+                )
+            });
+
+        println!("[global_get] {:?}", global_var);
+
+        self.stack.push_values(global_var.clone());
     }
 
     // 0x40

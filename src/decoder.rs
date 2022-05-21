@@ -1,3 +1,4 @@
+use crate::module::number::Number;
 use crate::reader::{WasmBinaryReader, LEB128_MAX_BITS};
 use crate::{
     export::ExportMap,
@@ -284,6 +285,40 @@ impl Decoder {
 #==================#
         "
         );
+
+        let [global_var_count, size] = self.reader.read_unsigned_leb128();
+        println!(
+            "global var count: {} Decoded size: {}",
+            global_var_count, size
+        );
+
+        for i in 0..global_var_count {
+            let global_var_type = self.decode_type().unwrap();
+            // mutable かどうかのフラグ 0 or 1
+            let [_, _] = self.reader.read_unsigned_leb128();
+
+            let byte = self.reader.read_next_byte().unwrap();
+            let value = match OpCode::from_byte(byte) {
+                OpCode::I32Const => {
+                    let [n, _] = self.reader.read_unsigned_leb128();
+                    self.module.global_vars.push(Number::Int32(n as i32));
+                    // 0x0b が返ってくる。end?
+                    self.reader.read_next_byte().unwrap();
+                    n
+                }
+                OpCode::I64Const => todo!(),
+                OpCode::F32Const => todo!(),
+                OpCode::F64Const => todo!(),
+                _ => unreachable!(),
+            };
+
+            println!(
+                "global var{} type: {}, value: {}",
+                i,
+                global_var_type.inspect(),
+                value,
+            );
+        }
     }
 
     /// Export Section

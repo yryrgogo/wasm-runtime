@@ -4,6 +4,7 @@ use std::fmt::{Debug, Formatter, Result};
 
 use self::function::Function;
 use self::function_type::FunctionType;
+use self::number::Number;
 use std::collections::HashMap;
 
 pub mod function;
@@ -19,6 +20,7 @@ pub struct Module {
     pub function_types: Vec<FunctionType>,
     pub imports: HashMap<String, ImportMap>,
     pub exports: HashMap<String, ExportMap>,
+    pub global_vars: Vec<Number>,
 }
 
 impl Default for Module {
@@ -30,6 +32,7 @@ impl Default for Module {
             function_types: vec![],
             imports: HashMap::new(),
             exports: HashMap::new(),
+            global_vars: Vec::new(),
         }
     }
 }
