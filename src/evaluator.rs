@@ -77,8 +77,9 @@ stack: {:#?}
     fn execute(&mut self, module: &Module, frame: &mut Frame) {
         loop {
             let opcode = self.stack.next_opcode(frame);
+            println!("opcode: {:?}, counter: {}", opcode, frame.get_counter());
+            // println!("{:#?}", frame);
 
-            // println!("opcode: {:?}, counter: {}", opcode, frame.get_counter());
             match opcode {
                 Some(0x02) => self.operate_block(frame),
                 Some(0x03) => self.operate_block(frame),
@@ -188,6 +189,7 @@ stack: {:#?}
     fn operate_br(&mut self, frame: &mut Frame) {
         let label_idx = self.read_u_leb128(frame);
         let label = self.stack.get_label(label_idx);
+        println!("[0x0c] {:#?}", label);
 
         let mut result: Option<Number> = None;
         if label.arity.len() != 0 {

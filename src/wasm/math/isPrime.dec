@@ -1,0 +1,67 @@
+000 20  // local.get
+001 0
+002 41  // i32.const
+003 1
+004 46  // i32.eq
+005 4   // if
+006 40  // block_type empty
+007 41  // i32.const
+008 0
+009 f   // return
+010 b   // end
+011 20  // local.get
+012 0
+013 10  // call 1
+014 1
+015 4   // if
+016 40  // block_type empty
+017 41  // i32.const
+018 1
+019 f   // return
+020 b   // end
+021 2   // block
+022 40  // block_type empty
+023 20  // local.get
+024 0
+025 10  // call 2
+026 0
+027 d   // br_if
+028 0
+029 41  // i32.const
+030 1
+031 21  // local.set
+032 1
+033 3   // loop
+034 40  // block_type empty
+035 20  // local.get
+036 1
+037 41  // i32.const
+038 2
+039 6a  // i32.add
+040 22  // local.tee
+041 1
+042 20  // local.get
+043 0
+044 4f  // local.ge_u
+045 4   // if
+046 40  // block_type empty
+047 41  // i32.const
+048 1   // index
+049 f   // return
+050 b   // end
+051 20  // local.get
+052 0   // index
+053 20  // local.get
+054 1   // index
+055 10  // call 3
+056 2   // block
+057 d   // br_if
+058 1
+059 c   // br
+060 0
+061 b   // end
+062 0
+063 b   // end
+064 41  // i32.const
+065 0
+066 b   // end

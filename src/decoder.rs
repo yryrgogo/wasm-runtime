@@ -434,6 +434,7 @@ impl Decoder {
         let mut block_stack = vec![Block::new(2, func.func_type.results.clone(), 0, None)];
 
         bytecodes.reverse();
+
         loop {
             if bytecodes.len() == 0 {
                 break;
@@ -441,18 +442,24 @@ impl Decoder {
             match self.find_next_structured_instruction(&mut bytecodes) {
                 Some(structured_instruction) => {
                     let idx = self.module.functions[func_idx].bytecodes.len() - bytecodes.len() - 1;
-                    println!("expression idx: {}", idx);
+
                     match OpCode::from_byte(structured_instruction) {
                         OpCode::End => {
                             let mut block = block_stack.pop().unwrap();
                             block.end_idx = idx;
+
+                            println!(
+                                "  [Structured Instruction] block {}-{}",
+                                block.start_idx, block.end_idx
+                            );
+
                             blocks.insert(block.start_idx, block);
                         }
                         OpCode::Unreachable => {
                             break;
                         }
                         op => {
-                            println!("structured Instruction OpCode: {:?}", op);
+                            println!("  [Structured Instruction] OpCode: {:?}", op);
                             let opcode = bytecodes.pop().unwrap_or_else(|| {
                                 panic!("Block Section の arity 読み込みに失敗しました。")
                             });
@@ -464,7 +471,7 @@ impl Decoder {
                                 });
                                 vec![v]
                             };
-                            println!("[Structured Instruction] {:?} arity: {:?}", op, arity);
+                            println!("  [Structured Instruction] {:?} arity: {:?}", op, arity);
                             let block = Block::new(structured_instruction, arity, idx, None);
                             block_stack.push(block);
                         }
@@ -485,6 +492,8 @@ impl Decoder {
         NumberType::decode_byte(byte)
     }
 
+    /// block, loop, if の index を解析するにあたり、各オペコードに続く byte をスキップする
+    /// NOTE: ここでスキップ処理の漏れがあると、正しく解析できない
     fn find_next_structured_instruction(&mut self, bytecodes: &mut Vec<u8>) -> Option<u8> {
         let mut byte;
         loop {
@@ -498,7 +507,9 @@ impl Decoder {
                     break;
                 }
                 OpCode::Br | OpCode::BrIf => {
-                    // println!("br or br_if");
+                    Decoder::decode_unsigned_leb128(bytecodes);
+                }
+                OpCode::Call => {
                     Decoder::decode_unsigned_leb128(bytecodes);
                 }
                 OpCode::GetLocal
