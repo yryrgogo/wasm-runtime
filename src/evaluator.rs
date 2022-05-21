@@ -36,7 +36,7 @@ impl Evaluator {
         let func = self.get_function(module, func_idx);
         let args = self.get_args(&func);
 
-        println!("[call] callee function: {:#?}", func);
+        // println!("[call] callee function: {:#?}", func);
         let result_num = func.func_type.results.len();
         self.stack.push_frame(Frame::new(func, args));
 
@@ -58,7 +58,7 @@ impl Evaluator {
     fn execute(&mut self, module: &Module, frame: &mut Frame) {
         loop {
             let opcode = self.stack.next_opcode(frame);
-            println!("counter: {}", frame.get_counter());
+            // println!("counter: {}", frame.get_counter());
             // println!("{:#?}", frame);
 
             match opcode {
@@ -305,7 +305,7 @@ impl Evaluator {
             .pop_value()
             .unwrap_or_else(|| panic!("[0x4f] 左値が Stack に存在しません。"));
         let result: Number;
-        if left > right {
+        if left >= right {
             result = Number::Int32(1);
         } else {
             result = Number::Int32(0);
