@@ -1,3 +1,4 @@
+use crate::module::function::Function;
 use crate::module::number::Number;
 use crate::structure::frame::Frame;
 use crate::util::leb::read_signed_leb128;
@@ -27,57 +28,37 @@ impl Evaluator {
 
         let func_idx = module.exports.get(func_name).unwrap().index;
         println!("Function name: {}, index: {}", func_name, func_idx);
-        self.call(module, func_idx)
+        self.call(module, func_idx);
+        self.stack.pop_value()
     }
 
-    fn call(&mut self, module: &Module, func_idx: usize) -> Option<Number> {
-        let func = module
-            .functions
-            .get(func_idx)
-            .unwrap_or_else(|| panic!("not found function index: {}", func_idx))
-            .clone();
-        let mut args: Vec<Number> = vec![];
+    fn call(&mut self, module: &Module, func_idx: usize) {
+        let func = self.get_function(module, func_idx);
+        let args = self.get_args(&func);
+
         println!("[call] callee function: {:#?}", func);
-
-        for (_, _) in func.func_type.parameters.iter().enumerate() {
-            let num = self.stack.pop_value().unwrap_or_else(|| {
-                panic!(
-                    "
-Function のパラメータが Stack に存在しません。
-function type: {:#?}
-stack: {:#?}
-",
-                    func.func_type, self.stack
-                )
-            });
-
-            match num {
-                Number::Int32(_) | Number::Int64(_) | Number::Float32(_) | Number::Float64(_) => {
-                    args.push(num);
-                }
-                _ => unreachable!(),
-            };
-        }
-        args.reverse();
-
+        let result_num = func.func_type.results.len();
         self.stack.push_frame(Frame::new(func, args));
 
-        loop {
-            match self.stack.current_frame() {
-                Some(ref mut f) => {
-                    self.execute(module, f);
-                }
-                None => break,
-            }
-        }
+        let mut frame = self.stack.current_frame().unwrap();
+        self.execute(module, &mut frame);
 
-        self.stack.pop_value()
+        let mut results: Vec<Number> = vec![];
+        for _ in 0..result_num {
+            let result = self.stack.pop_value();
+            let n = result.unwrap_or_else(|| panic!("[call] 関数の戻り値が存在しません"));
+            results.push(n);
+        }
+        self.stack.pop_current_frame();
+        for n in results {
+            self.stack.push_values(n);
+        }
     }
 
     fn execute(&mut self, module: &Module, frame: &mut Frame) {
         loop {
             let opcode = self.stack.next_opcode(frame);
-            println!("opcode: {:?}, counter: {}", opcode, frame.get_counter());
+            println!("counter: {}", frame.get_counter());
             // println!("{:#?}", frame);
 
             match opcode {
@@ -86,11 +67,12 @@ stack: {:#?}
                 Some(0x04) => self.operate_if(frame),
                 Some(0x05) => self.operate_else(frame),
                 Some(0x10) => self.operate_call(module, frame),
-                Some(0x0b) => self.operate_end(frame),
+                Some(0x0b) => {
+                    self.operate_end(frame);
+                }
                 Some(0x0c) => self.operate_br(frame),
                 Some(0x0d) => self.operate_br_if(frame),
                 Some(0x0f) => {
-                    self.operate_return();
                     break;
                 }
                 Some(0x20) => self.operate_local_get(frame),
@@ -168,28 +150,13 @@ stack: {:#?}
         let last_idx = frame.function.bytecodes.len();
         if counter != last_idx {
             self.stack.pop_last_label();
-            return;
         }
-
-        let return_value = self.stack.pop_value();
-        println!("#[operate_end] Result: {:#?}", return_value);
-        if let crate::instructions::Instructions::Frame(_) = self.stack.stack.last().unwrap() {
-            self.stack.pop_current_frame();
-            if let Some(result) = return_value {
-                self.stack.push_values(result);
-            }
-        } else {
-            unreachable!("#[operate_end] Stack top が Frame ではありません。")
-        };
-
-        println!("[operate_end] End");
     }
 
     // 0x0c
     fn operate_br(&mut self, frame: &mut Frame) {
         let label_idx = self.read_u_leb128(frame);
         let label = self.stack.get_label(label_idx);
-        println!("[0x0c] {:#?}", label);
 
         let mut result: Option<Number> = None;
         if label.arity.len() != 0 {
@@ -229,23 +196,7 @@ stack: {:#?}
     }
 
     // 0x0f
-    fn operate_return(&mut self) {
-        let return_value = self.stack.pop_value();
-        println!("#[operate_return] Result: {:#?}", &return_value);
-
-        self.stack.pop_current_frame();
-        if let Some(result) = return_value {
-            self.stack.push_values(result);
-        }
-        // let last_frame_position = self
-        //     .stack
-        //     .frame_positions
-        //     .last()
-        //     .unwrap_or_else(|| panic!("[operate_return] Frame が Stack に存在しません。"));
-        // for _ in 0..(self.stack.stack.len() - last_frame_position) {
-        //     self.stack.pop_value();
-        // }
-    }
+    fn operate_return(&mut self, frame: &mut Frame) {}
 
     // 0x10
     fn operate_call(&mut self, module: &Module, frame: &mut Frame) {
@@ -440,6 +391,39 @@ stack: {:#?}
             }
             Err(_) => panic!("signed leb128 の decode に失敗しました。"),
         }
+    }
+
+    fn get_function(&self, module: &Module, func_idx: usize) -> Function {
+        module
+            .functions
+            .get(func_idx)
+            .unwrap_or_else(|| panic!("not found function index: {}", func_idx))
+            .clone()
+    }
+
+    fn get_args(&mut self, func: &Function) -> Vec<Number> {
+        let mut args: Vec<Number> = vec![];
+        for (_, _) in func.func_type.parameters.iter().enumerate() {
+            let num = self.stack.pop_value().unwrap_or_else(|| {
+                panic!(
+                    "
+Function のパラメータが Stack に存在しません。
+function type: {:#?}
+stack: {:#?}
+",
+                    func.func_type, self.stack
+                )
+            });
+
+            match num {
+                Number::Int32(_) | Number::Int64(_) | Number::Float32(_) | Number::Float64(_) => {
+                    args.push(num);
+                }
+                _ => unreachable!(),
+            };
+        }
+        args.reverse();
+        args
     }
 }
 
