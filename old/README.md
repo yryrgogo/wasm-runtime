@@ -1,6 +1,8 @@
-# wasm-interpreter
+# Wasm Runtime
 
-[WIP] WebAssembly Interpreter を Rust で書く。
+C コンパイラの自作を通して色々書き直したくなったため、この実装は中止。
+
+WebAssembly Runtime を Rust で書く。
 
 ## Todo
 
