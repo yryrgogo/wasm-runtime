@@ -4,7 +4,7 @@ use crate::{
         section::{CodeSectionNode, FunctionSectionNode, SectionId, TypeSectionNode},
         ModuleNode,
     },
-    node::{FunctionBodyNode, FunctionTypeNode, LocalEntryNode, ResultTypeNode},
+    node::{CodeNode, FunctionTypeNode, LocalEntryNode, ResultTypeNode},
     types::ValueType,
 };
 use std::error::Error;
@@ -33,6 +33,8 @@ impl Parser {
             self.section(bytes, &mut module)
                 .expect("Failed to parse section");
         }
+
+        println!("{:#?}", module);
 
         Ok(module)
     }
@@ -111,20 +113,19 @@ impl Parser {
     /// code section = section10(vec((code)*))
     fn code_section(&self, bytes: &mut Vec<u8>) -> Result<CodeSectionNode, Box<dyn Error>> {
         let (count, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
-        let mut bodies: Vec<FunctionBodyNode> = vec![];
+        let mut bodies: Vec<CodeNode> = vec![];
 
         for _ in 0..count {
-            let body = self
-                .function_body(bytes)
-                .expect("Failed to parse function body");
+            let body = self.code(bytes).expect("Failed to parse function body");
             bodies.push(body);
         }
 
-        Ok(CodeSectionNode { count, bodies })
+        Ok(CodeSectionNode { bodies })
     }
 
-    fn function_body(&self, bytes: &mut Vec<u8>) -> Result<FunctionBodyNode, Box<dyn Error>> {
-        let (body_size, _) = Parser::read_u32(bytes).expect("Failed to parse function body size");
+    fn code(&self, bytes: &mut Vec<u8>) -> Result<CodeNode, Box<dyn Error>> {
+        let (function_body_size, _) =
+            Parser::read_u32(bytes).expect("Failed to parse function body size");
         let init_size = bytes.len();
 
         let (local_count, _) =
@@ -139,17 +140,17 @@ impl Parser {
         }
 
         let drained_size = init_size - bytes.len();
-        let mut code = bytes[0..(body_size as usize - drained_size as usize)].to_vec();
+        let mut code = bytes[0..(function_body_size as usize - drained_size as usize)].to_vec();
         let end = code.pop();
         if end != Some(0x0b) {
             panic!("Invalid function body");
         }
 
-        Ok(FunctionBodyNode {
-            body_size,
+        Ok(CodeNode {
+            function_body_size,
             local_count,
             locals: local_entries,
-            code,
+            expr: code,
         })
     }
 

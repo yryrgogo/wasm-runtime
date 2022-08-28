@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum NumberType {
     I32,
     I64,
@@ -20,6 +21,7 @@ impl From<u8> for NumberType {
     }
 }
 
+#[derive(Debug)]
 pub enum VectorType {
     V128,
 }
@@ -52,6 +54,7 @@ impl From<u8> for ReferenceType {
     }
 }
 
+#[derive(Debug)]
 pub enum ValueType {
     NumberType(NumberType),
     // VectorType(VectorType),

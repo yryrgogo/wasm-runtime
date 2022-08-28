@@ -4,6 +4,7 @@ use std::error::Error;
 
 use self::section::{CodeSectionNode, FunctionSectionNode, TypeSectionNode};
 
+#[derive(Debug)]
 pub struct ModuleNode {
     pub type_section: Option<TypeSectionNode>,
     pub function_section: Option<FunctionSectionNode>,
