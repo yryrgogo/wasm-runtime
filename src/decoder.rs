@@ -102,10 +102,17 @@ impl Decoder {
 
         let mut node = ResultTypeNode { val_types: vec![] };
         for _ in 0..count {
-            let byte = Decoder::read_u8(bytes).expect("Invalid param type id");
-            node.val_types.push(NumberType::from(byte));
+            let number_type = self
+                .decode_number_type(bytes)
+                .expect("Failed to decode number type");
+            node.val_types.push(number_type);
         }
         Ok(node)
+    }
+
+    fn decode_number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberType, Box<dyn Error>> {
+        let byte = Decoder::read_u8(bytes).expect("Failed to read number type id");
+        Ok(NumberType::from(byte))
     }
 
     pub fn read_u8(bytes: &mut Vec<u8>) -> Result<u8, Box<dyn Error>> {
