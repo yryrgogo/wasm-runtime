@@ -2,6 +2,7 @@ use std::env;
 
 mod decoder;
 mod module;
+mod types;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

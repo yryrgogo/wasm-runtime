@@ -1,6 +1,8 @@
-pub struct Module {}
+pub mod section;
+
 use std::error::Error;
 
+pub struct Module {}
 impl Module {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {})
