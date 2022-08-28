@@ -1,6 +1,7 @@
 use std::env;
 
 mod module;
+mod node;
 mod parser;
 mod types;
 
@@ -11,7 +12,7 @@ fn main() {
 
     let mut bytes = std::fs::read(file_path).expect("file not found");
 
-    let decoder = parser::Parser::new().unwrap();
-    decoder.parse(&mut bytes).expect("Failed to decode");
+    let parser = parser::Parser::new().unwrap();
+    parser.parse(&mut bytes).expect("Failed to decode");
     println!("Successfully decoded {:?}", bytes);
 }

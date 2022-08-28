@@ -2,17 +2,19 @@ pub mod section;
 
 use std::error::Error;
 
-use self::section::{FunctionSectionNode, TypeSectionNode};
+use self::section::{CodeSectionNode, FunctionSectionNode, TypeSectionNode};
 
 pub struct ModuleNode {
     pub type_section: Option<TypeSectionNode>,
     pub function_section: Option<FunctionSectionNode>,
+    pub code_section: Option<CodeSectionNode>,
 }
 impl ModuleNode {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             function_section: None,
             type_section: None,
+            code_section: None,
         })
     }
 

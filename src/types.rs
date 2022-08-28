@@ -20,30 +20,40 @@ impl From<u8> for NumberType {
     }
 }
 
-pub enum ValueType {
-    NumberType,
+pub enum VectorType {
+    V128,
 }
 
-// https://webassembly.github.io/spec/core/binary/types.html#function-types
-pub struct FunctionTypeNode {
-    pub params: ResultTypeNode,
-    pub returns: ResultTypeNode,
-}
-impl FunctionTypeNode {
-    pub fn validate_header(header: u8) {
-        const HEADER: u8 = 0x60;
-        if header != HEADER {
-            panic!("Invalid TypeSection header {}", header);
+impl From<u8> for VectorType {
+    fn from(byte: u8) -> Self {
+        use VectorType::*;
+
+        match byte {
+            0x7F => V128,
+            _ => unreachable!("Invalid ValueType {:x}", byte),
         }
     }
 }
 
-// https://webassembly.github.io/spec/core/binary/types.html#result-types
-pub struct ResultTypeNode {
-    // TODO: replace to Value Types
-    pub val_types: Vec<NumberType>,
+pub enum ReferenceType {
+    FunctionRef,
+    ExternRef,
 }
 
-pub struct NumberTypeNode {
-    pub ty: NumberType,
+impl From<u8> for ReferenceType {
+    fn from(byte: u8) -> Self {
+        use ReferenceType::*;
+
+        match byte {
+            0x70 => FunctionRef,
+            0x6F => ExternRef,
+            _ => unreachable!("Invalid ReferenceType {:x}", byte),
+        }
+    }
+}
+
+pub enum ValueType {
+    NumberType(NumberType),
+    // VectorType(VectorType),
+    // ReferenceType(ReferenceType),
 }

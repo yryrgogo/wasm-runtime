@@ -1,10 +1,11 @@
 use super::types::NumberType;
 use crate::{
     module::{
-        section::{FunctionSectionNode, SectionId, TypeSectionNode},
+        section::{CodeSectionNode, FunctionSectionNode, SectionId, TypeSectionNode},
         ModuleNode,
     },
-    types::{FunctionTypeNode, ResultTypeNode},
+    node::{FunctionBodyNode, FunctionTypeNode, LocalEntryNode, ResultTypeNode},
+    types::ValueType,
 };
 use std::error::Error;
 
@@ -67,7 +68,12 @@ impl Parser {
             SectionId::GlobalSectionId => todo!("global section"),
             SectionId::ExportSectionId => todo!("export section"),
             SectionId::StartSectionId => todo!("start section"),
-            SectionId::CodeSectionId => todo!("code section"),
+            SectionId::CodeSectionId => {
+                let section = self
+                    .code_section(&mut section_bytes)
+                    .expect("Failed to parse code section");
+                (*module).code_section = Some(section);
+            }
             SectionId::ElementSectionId => todo!("element section"),
             SectionId::DataSectionId => todo!("data section"),
         };
@@ -77,9 +83,9 @@ impl Parser {
     /// type section = section1(vec((functype)*))
     fn type_section(&self, bytes: &mut Vec<u8>) -> Result<TypeSectionNode, Box<dyn Error>> {
         let mut function_types: Vec<FunctionTypeNode> = vec![];
-        let (size, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
 
-        for _ in 0..size {
+        for _ in 0..count {
             let function_type = self
                 .function_type(bytes)
                 .expect("Failed to parse function type");
@@ -92,14 +98,72 @@ impl Parser {
     /// function section = section3(vec((typeidx)*))
     fn function_section(&self, bytes: &mut Vec<u8>) -> Result<FunctionSectionNode, Box<dyn Error>> {
         let mut type_indexes: Vec<u32> = vec![];
-        let (size, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
 
-        for _ in 0..size {
+        for _ in 0..count {
             let (type_index, _) = Parser::read_u32(bytes).expect("Failed to parse type index");
             type_indexes.push(type_index);
         }
 
         Ok(FunctionSectionNode { type_indexes })
+    }
+
+    /// code section = section10(vec((code)*))
+    fn code_section(&self, bytes: &mut Vec<u8>) -> Result<CodeSectionNode, Box<dyn Error>> {
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
+        let mut bodies: Vec<FunctionBodyNode> = vec![];
+
+        for _ in 0..count {
+            let body = self
+                .function_body(bytes)
+                .expect("Failed to parse function body");
+            bodies.push(body);
+        }
+
+        Ok(CodeSectionNode { count, bodies })
+    }
+
+    fn function_body(&self, bytes: &mut Vec<u8>) -> Result<FunctionBodyNode, Box<dyn Error>> {
+        let (body_size, _) = Parser::read_u32(bytes).expect("Failed to parse function body size");
+        let init_size = bytes.len();
+
+        let (local_count, _) =
+            Parser::read_u32(bytes).expect("Failed to parse function body local count");
+        let mut local_entries: Vec<LocalEntryNode> = vec![];
+
+        for _ in 0..local_count {
+            let local_entry = self
+                .local_entry(bytes)
+                .expect("Failed to parse local entry");
+            local_entries.push(local_entry);
+        }
+
+        let drained_size = init_size - bytes.len();
+        let mut code = bytes[0..(body_size as usize - drained_size as usize)].to_vec();
+        let end = code.pop();
+        if end != Some(0x0b) {
+            panic!("Invalid function body");
+        }
+
+        Ok(FunctionBodyNode {
+            body_size,
+            local_count,
+            locals: local_entries,
+            code,
+        })
+    }
+
+    fn local_entry(&self, bytes: &mut Vec<u8>) -> Result<LocalEntryNode, Box<dyn Error>> {
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to parse local entry count");
+
+        let number_type = self
+            .number_type(bytes)
+            .expect("Failed to parse number type");
+
+        Ok(LocalEntryNode {
+            count,
+            val_type: ValueType::NumberType(number_type),
+        })
     }
 
     /// functype = 0x60 (result type) (result type)
@@ -130,7 +194,7 @@ impl Parser {
             let number_type = self
                 .number_type(bytes)
                 .expect("Failed to parse number type");
-            node.val_types.push(number_type);
+            node.val_types.push(ValueType::NumberType(number_type));
         }
         Ok(node)
     }

@@ -1,4 +1,4 @@
-use crate::types::FunctionTypeNode;
+use crate::node::{FunctionBodyNode, FunctionTypeNode};
 
 pub enum SectionId {
     CustomSectionId = 0x0,
@@ -38,4 +38,9 @@ pub struct TypeSectionNode {
 
 pub struct FunctionSectionNode {
     pub type_indexes: Vec<u32>,
+}
+
+pub struct CodeSectionNode {
+    pub count: u32,
+    pub bodies: Vec<FunctionBodyNode>,
 }
