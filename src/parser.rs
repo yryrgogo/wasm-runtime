@@ -7,15 +7,15 @@ use std::error::Error;
 
 pub const LEB128_MAX_BITS: usize = 32;
 
-pub struct Decoder {}
+pub struct Parser {}
 
-impl Decoder {
+impl Parser {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {})
     }
 
-    pub fn decode(&self, bytes: &mut Vec<u8>) -> Result<Module, Box<dyn Error>> {
-        let (magic, version) = self.decode_header(bytes).expect("Invalid header");
+    pub fn parse(&self, bytes: &mut Vec<u8>) -> Result<Module, Box<dyn Error>> {
+        let (magic, version) = self.module_header(bytes).expect("Invalid header");
         Module::validate_magic(&magic);
         Module::validate_version(&version);
 
@@ -26,31 +26,30 @@ impl Decoder {
         }
 
         while bytes.len() > 0 {
-            self.decode_section(bytes)
-                .expect("Failed to decode section");
+            self.section(bytes).expect("Failed to parse section");
         }
 
         Ok(module)
     }
 
-    fn decode_header(&self, bytes: &mut Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), Box<dyn Error>> {
+    fn module_header(&self, bytes: &mut Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), Box<dyn Error>> {
         let magic_bytes = bytes[0..4].to_vec();
         let version = bytes[4..8].to_vec();
         *bytes = bytes[8..].to_vec();
         Ok((magic_bytes, version))
     }
 
-    fn decode_section(&self, bytes: &mut Vec<u8>) -> Result<(), Box<dyn Error>> {
-        let id = Decoder::read_u8(bytes).expect("Failed to read section id");
-        let (size, _) = Decoder::read_u32(bytes).expect("Failed to read section size");
+    fn section(&self, bytes: &mut Vec<u8>) -> Result<(), Box<dyn Error>> {
+        let id = Parser::read_u8(bytes).expect("Failed to parse section id");
+        let (size, _) = Parser::read_u32(bytes).expect("Failed to parse section size");
         let mut section_bytes = bytes[0..size].to_vec();
         (*bytes).drain(0..size);
 
         match SectionId::from_u8(id) {
             SectionId::CustomSectionId => todo!(),
             SectionId::TypeSectionId => self
-                .decode_type_section(&mut section_bytes)
-                .expect("Failed to decode type section"),
+                .type_section(&mut section_bytes)
+                .expect("Failed to parse type section"),
             SectionId::ImportSectionId => todo!("import section"),
             SectionId::FunctionSectionId => todo!("function section"),
             SectionId::GlobalSectionId => todo!(),
@@ -61,57 +60,56 @@ impl Decoder {
         Ok(())
     }
 
-    /// type section = section1(vec(func type))
-    fn decode_type_section(&self, bytes: &mut Vec<u8>) -> Result<TypeSectionNode, Box<dyn Error>> {
+    /// type section = section1(vec((function type)*))
+    fn type_section(&self, bytes: &mut Vec<u8>) -> Result<TypeSectionNode, Box<dyn Error>> {
         let mut vector: Vec<FunctionTypeNode> = vec![];
-        let (size, _) = Decoder::read_u32(bytes).expect("Failed to read vector size");
+        let (size, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
 
         for _ in 0..size {
             let function_type = self
-                .decode_function_type(bytes)
-                .expect("Failed to decode function type");
+                .function_type(bytes)
+                .expect("Failed to parse function type");
             vector.push(function_type);
         }
 
         Ok(TypeSectionNode { vector })
     }
 
-    fn decode_function_type(
-        &self,
-        bytes: &mut Vec<u8>,
-    ) -> Result<FunctionTypeNode, Box<dyn Error>> {
-        let header = Decoder::read_u8(bytes).expect("Failed to read function type header");
+    /// function type = 0x60 (result type) (result type)
+    fn function_type(&self, bytes: &mut Vec<u8>) -> Result<FunctionTypeNode, Box<dyn Error>> {
+        let header = Parser::read_u8(bytes).expect("Failed to parse function type header");
         FunctionTypeNode::validate_header(header);
 
         let params = self
-            .decode_result_types(bytes)
-            .expect("Failed to decode value type");
+            .result_types(bytes)
+            .expect("Failed to parse value type");
 
         // returns
         let returns = self
-            .decode_result_types(bytes)
-            .expect("Failed to decode value type");
+            .result_types(bytes)
+            .expect("Failed to parse value type");
 
         let function_type_node: FunctionTypeNode = FunctionTypeNode { params, returns };
 
         Ok(function_type_node)
     }
 
-    fn decode_result_types(&self, bytes: &mut Vec<u8>) -> Result<ResultTypeNode, Box<dyn Error>> {
-        let (count, _) = Decoder::read_u32(bytes).expect("Failed to read count");
+    /// result type = vec((value type)*)
+    fn result_types(&self, bytes: &mut Vec<u8>) -> Result<ResultTypeNode, Box<dyn Error>> {
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to read count");
 
         let mut node = ResultTypeNode { val_types: vec![] };
         for _ in 0..count {
             let number_type = self
-                .decode_number_type(bytes)
-                .expect("Failed to decode number type");
+                .number_type(bytes)
+                .expect("Failed to parse number type");
             node.val_types.push(number_type);
         }
         Ok(node)
     }
 
-    fn decode_number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberType, Box<dyn Error>> {
-        let byte = Decoder::read_u8(bytes).expect("Failed to read number type id");
+    fn number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberType, Box<dyn Error>> {
+        let byte = Parser::read_u8(bytes).expect("Failed to read number type id");
         Ok(NumberType::from(byte))
     }
 
@@ -176,7 +174,7 @@ mod leb128_tests {
     #[test]
     fn read_u32_case1() {
         let mut bytes = vec![229, 142, 38, 0, 0, 0, 0, 0];
-        let (value, size) = Decoder::read_u32(&mut bytes).expect("Invalid u32");
+        let (value, size) = Parser::read_u32(&mut bytes).expect("Invalid u32");
         assert_eq!(value, 624485);
         assert_eq!(size, 3);
     }
@@ -184,7 +182,7 @@ mod leb128_tests {
     #[test]
     fn read_u32_case2() {
         let mut bytes = vec![0x80, 0x80, 0xC0, 0x00, 0x0B];
-        let (value, size) = Decoder::read_u32(&mut bytes).expect("Invalid u32");
+        let (value, size) = Parser::read_u32(&mut bytes).expect("Invalid u32");
 
         assert_eq!(value, 1048576);
         assert_eq!(size, 4);
@@ -193,7 +191,7 @@ mod leb128_tests {
     #[test]
     fn test_read_i32() {
         let mut bytes = vec![127, 0, 0, 0, 0, 0, 0, 0];
-        let (value, size) = Decoder::read_i32(&mut bytes).expect("Invalid i32");
+        let (value, size) = Parser::read_i32(&mut bytes).expect("Invalid i32");
 
         assert_eq!(value, -1);
         assert_eq!(size, 1);
