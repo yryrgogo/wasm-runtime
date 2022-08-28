@@ -1,53 +1,41 @@
-use crate::types::NumberType;
+use crate::types::FunctionTypeNode;
 
 pub enum SectionId {
-    CustomSectionId = 0,
-    TypeSectionId = 1,
-    ImportSectionId = 2,
-    FunctionSectionId = 3,
-    GlobalSectionId = 6,
-    ExportSectionId = 7,
-    StartSectionId = 8,
-    CodeSectionId = 10,
+    CustomSectionId = 0x0,
+    TypeSectionId = 0x1,
+    ImportSectionId = 0x2,
+    FunctionSectionId = 0x3,
+    GlobalSectionId = 0x6,
+    ExportSectionId = 0x7,
+    StartSectionId = 0x8,
+    ElementSectionId = 0x9,
+    CodeSectionId = 0xA,
+    DataSectionId = 0xB,
 }
 
-impl SectionId {
-    pub fn from_u8(n: u8) -> SectionId {
-        match n {
-            0 => SectionId::CustomSectionId,
-            1 => SectionId::TypeSectionId,
-            2 => SectionId::ImportSectionId,
-            3 => SectionId::FunctionSectionId,
-            6 => SectionId::GlobalSectionId,
-            7 => SectionId::ExportSectionId,
-            8 => SectionId::StartSectionId,
-            10 => SectionId::CodeSectionId,
-            _ => todo!("{} is not supported", n),
+impl From<u8> for SectionId {
+    fn from(x: u8) -> SectionId {
+        use self::SectionId::*;
+        match x {
+            0x0 => CustomSectionId,
+            0x1 => TypeSectionId,
+            0x2 => ImportSectionId,
+            0x3 => FunctionSectionId,
+            0x6 => GlobalSectionId,
+            0x7 => ExportSectionId,
+            0x8 => StartSectionId,
+            0x9 => ElementSectionId,
+            0xA => CodeSectionId,
+            0xB => DataSectionId,
+            _ => todo!("{} is not supported", x),
         }
     }
 }
 
 pub struct TypeSectionNode {
-    pub vector: Vec<FunctionTypeNode>,
-}
-impl TypeSectionNode {}
-
-// https://webassembly.github.io/spec/core/binary/types.html#function-types
-pub struct FunctionTypeNode {
-    pub params: ResultTypeNode,
-    pub returns: ResultTypeNode,
-}
-impl FunctionTypeNode {
-    pub fn validate_header(header: u8) {
-        const HEADER: u8 = 0x60;
-        if header != HEADER {
-            panic!("Invalid TypeSection header {}", header);
-        }
-    }
+    pub function_types: Vec<FunctionTypeNode>,
 }
 
-// https://webassembly.github.io/spec/core/binary/types.html#result-types
-pub struct ResultTypeNode {
-    // TODO: replace to Value Types
-    pub val_types: Vec<NumberType>,
+pub struct FunctionSectionNode {
+    pub type_indexes: Vec<u32>,
 }

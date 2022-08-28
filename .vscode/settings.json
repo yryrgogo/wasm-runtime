@@ -10,8 +10,10 @@
     "arity",
     "bytecode",
     "bytecodes",
+    "functype",
     "powf",
-    "struct"
+    "struct",
+    "typeidx"
   ],
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "rust-lang.rust",

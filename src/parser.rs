@@ -1,11 +1,14 @@
 use super::types::NumberType;
-use crate::module::{
-    section::{FunctionTypeNode, ResultTypeNode, SectionId, TypeSectionNode},
-    Module,
+use crate::{
+    module::{
+        section::{FunctionSectionNode, SectionId, TypeSectionNode},
+        ModuleNode,
+    },
+    types::{FunctionTypeNode, ResultTypeNode},
 };
 use std::error::Error;
 
-pub const LEB128_MAX_BITS: usize = 32;
+pub const LEB128_MAX_BITS: u32 = 32;
 
 pub struct Parser {}
 
@@ -14,19 +17,20 @@ impl Parser {
         Ok(Self {})
     }
 
-    pub fn parse(&self, bytes: &mut Vec<u8>) -> Result<Module, Box<dyn Error>> {
+    pub fn parse(&self, bytes: &mut Vec<u8>) -> Result<ModuleNode, Box<dyn Error>> {
         let (magic, version) = self.module_header(bytes).expect("Invalid header");
-        Module::validate_magic(&magic);
-        Module::validate_version(&version);
+        ModuleNode::validate_magic(&magic);
+        ModuleNode::validate_version(&version);
 
-        let module = Module::new().expect("Invalid module");
+        let mut module = ModuleNode::new().expect("Invalid module");
 
         if bytes.len() == 0 {
             return Ok(module);
         }
 
         while bytes.len() > 0 {
-            self.section(bytes).expect("Failed to parse section");
+            self.section(bytes, &mut module)
+                .expect("Failed to parse section");
         }
 
         Ok(module)
@@ -39,43 +43,66 @@ impl Parser {
         Ok((magic_bytes, version))
     }
 
-    fn section(&self, bytes: &mut Vec<u8>) -> Result<(), Box<dyn Error>> {
+    fn section(&self, bytes: &mut Vec<u8>, module: &mut ModuleNode) -> Result<(), Box<dyn Error>> {
         let id = Parser::read_u8(bytes).expect("Failed to parse section id");
         let (size, _) = Parser::read_u32(bytes).expect("Failed to parse section size");
-        let mut section_bytes = bytes[0..size].to_vec();
-        (*bytes).drain(0..size);
+        let mut section_bytes = bytes[0..(size as usize)].to_vec();
+        (*bytes).drain(0..(size as usize));
 
-        match SectionId::from_u8(id) {
-            SectionId::CustomSectionId => todo!(),
-            SectionId::TypeSectionId => self
-                .type_section(&mut section_bytes)
-                .expect("Failed to parse type section"),
+        match SectionId::from(id) {
+            SectionId::CustomSectionId => todo!("Custom section"),
+            SectionId::TypeSectionId => {
+                let section = self
+                    .type_section(&mut section_bytes)
+                    .expect("Failed to parse type section");
+                (*module).type_section = Some(section);
+            }
             SectionId::ImportSectionId => todo!("import section"),
-            SectionId::FunctionSectionId => todo!("function section"),
-            SectionId::GlobalSectionId => todo!(),
-            SectionId::ExportSectionId => todo!(),
-            SectionId::StartSectionId => todo!(),
-            SectionId::CodeSectionId => todo!(),
+            SectionId::FunctionSectionId => {
+                let section = self
+                    .function_section(&mut section_bytes)
+                    .expect("Failed to parse function section");
+                (*module).function_section = Some(section);
+            }
+            SectionId::GlobalSectionId => todo!("global section"),
+            SectionId::ExportSectionId => todo!("export section"),
+            SectionId::StartSectionId => todo!("start section"),
+            SectionId::CodeSectionId => todo!("code section"),
+            SectionId::ElementSectionId => todo!("element section"),
+            SectionId::DataSectionId => todo!("data section"),
         };
         Ok(())
     }
 
-    /// type section = section1(vec((function type)*))
+    /// type section = section1(vec((functype)*))
     fn type_section(&self, bytes: &mut Vec<u8>) -> Result<TypeSectionNode, Box<dyn Error>> {
-        let mut vector: Vec<FunctionTypeNode> = vec![];
+        let mut function_types: Vec<FunctionTypeNode> = vec![];
         let (size, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
 
         for _ in 0..size {
             let function_type = self
                 .function_type(bytes)
                 .expect("Failed to parse function type");
-            vector.push(function_type);
+            function_types.push(function_type);
         }
 
-        Ok(TypeSectionNode { vector })
+        Ok(TypeSectionNode { function_types })
     }
 
-    /// function type = 0x60 (result type) (result type)
+    /// function section = section3(vec((typeidx)*))
+    fn function_section(&self, bytes: &mut Vec<u8>) -> Result<FunctionSectionNode, Box<dyn Error>> {
+        let mut type_indexes: Vec<u32> = vec![];
+        let (size, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
+
+        for _ in 0..size {
+            let (type_index, _) = Parser::read_u32(bytes).expect("Failed to parse type index");
+            type_indexes.push(type_index);
+        }
+
+        Ok(FunctionSectionNode { type_indexes })
+    }
+
+    /// functype = 0x60 (result type) (result type)
     fn function_type(&self, bytes: &mut Vec<u8>) -> Result<FunctionTypeNode, Box<dyn Error>> {
         let header = Parser::read_u8(bytes).expect("Failed to parse function type header");
         FunctionTypeNode::validate_header(header);
@@ -119,15 +146,15 @@ impl Parser {
         Ok(byte)
     }
 
-    pub fn read_u32(bytes: &mut Vec<u8>) -> Result<(usize, usize), Box<dyn Error>> {
-        let mut value: usize = 0;
-        let mut shift: usize = 0;
-        let mut byte_count: usize = 0;
+    pub fn read_u32(bytes: &mut Vec<u8>) -> Result<(u32, u32), Box<dyn Error>> {
+        let mut value: u32 = 0;
+        let mut shift: u32 = 0;
+        let mut byte_count: u32 = 0;
 
         loop {
             let byte = bytes[0];
             (*bytes).drain(0..1);
-            value |= usize::from(byte & 0x7f) << shift;
+            value |= u32::from(byte & 0x7f) << shift;
             shift += 7;
             byte_count += 1;
 
@@ -141,10 +168,10 @@ impl Parser {
         Ok((value, byte_count))
     }
 
-    fn read_i32(bytes: &mut Vec<u8>) -> Result<(isize, usize), Box<dyn Error>> {
+    fn read_i32(bytes: &mut Vec<u8>) -> Result<(isize, u32), Box<dyn Error>> {
         let mut value: isize = 0;
-        let mut shift: usize = 0;
-        let mut byte_count: usize = 0;
+        let mut shift: u32 = 0;
+        let mut byte_count: u32 = 0;
 
         loop {
             let byte = bytes[0];

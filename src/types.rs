@@ -23,3 +23,27 @@ impl From<u8> for NumberType {
 pub enum ValueType {
     NumberType,
 }
+
+// https://webassembly.github.io/spec/core/binary/types.html#function-types
+pub struct FunctionTypeNode {
+    pub params: ResultTypeNode,
+    pub returns: ResultTypeNode,
+}
+impl FunctionTypeNode {
+    pub fn validate_header(header: u8) {
+        const HEADER: u8 = 0x60;
+        if header != HEADER {
+            panic!("Invalid TypeSection header {}", header);
+        }
+    }
+}
+
+// https://webassembly.github.io/spec/core/binary/types.html#result-types
+pub struct ResultTypeNode {
+    // TODO: replace to Value Types
+    pub val_types: Vec<NumberType>,
+}
+
+pub struct NumberTypeNode {
+    pub ty: NumberType,
+}

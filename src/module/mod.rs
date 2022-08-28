@@ -2,10 +2,18 @@ pub mod section;
 
 use std::error::Error;
 
-pub struct Module {}
-impl Module {
+use self::section::{FunctionSectionNode, TypeSectionNode};
+
+pub struct ModuleNode {
+    pub type_section: Option<TypeSectionNode>,
+    pub function_section: Option<FunctionSectionNode>,
+}
+impl ModuleNode {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        Ok(Self {})
+        Ok(Self {
+            function_section: None,
+            type_section: None,
+        })
     }
 
     pub fn validate_magic(bytes: &Vec<u8>) -> bool {
