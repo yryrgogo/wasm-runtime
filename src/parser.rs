@@ -1,10 +1,14 @@
 use super::types::NumberType;
 use crate::{
+    instruction::Instruction,
     module::{
         section::{CodeSectionNode, FunctionSectionNode, SectionId, TypeSectionNode},
         ModuleNode,
     },
-    node::{CodeNode, FunctionTypeNode, LocalEntryNode, ResultTypeNode},
+    node::{
+        CodeNode, ExpressionNode, FunctionTypeNode, I32Const, InstructionNode, LocalEntryNode,
+        ResultTypeNode,
+    },
     types::ValueType,
 };
 use std::error::Error;
@@ -139,18 +143,35 @@ impl Parser {
             local_entries.push(local_entry);
         }
 
-        let drained_size = init_size - bytes.len();
-        let mut code = bytes[0..(function_body_size as usize - drained_size as usize)].to_vec();
-        let end = code.pop();
-        if end != Some(0x0b) {
-            panic!("Invalid function body");
+        let local_entries_size = init_size - bytes.len();
+        let mut code =
+            bytes[0..(function_body_size as usize - local_entries_size as usize)].to_vec();
+        // let end = code.pop();
+        // if end != Some(0x0b) {
+        //     panic!("Invalid function body");
+        // }
+
+        let mut instructions: Vec<InstructionNode> = vec![];
+        loop {
+            let instruction = self
+                .instruction(&mut code)
+                .expect("Failed to parse instruction");
+            match instruction {
+                InstructionNode::End => {
+                    instructions.push(instruction);
+                    break;
+                }
+                _ => {
+                    instructions.push(instruction);
+                }
+            }
         }
 
         Ok(CodeNode {
             function_body_size,
             local_count,
             locals: local_entries,
-            expr: code,
+            expr: ExpressionNode { instructions },
         })
     }
 
@@ -165,6 +186,165 @@ impl Parser {
             count,
             val_type: ValueType::NumberType(number_type),
         })
+    }
+
+    fn instruction(&self, bytes: &mut Vec<u8>) -> Result<InstructionNode, Box<dyn Error>> {
+        let opcode = Parser::read_u8(bytes).expect("Failed to parse opcode");
+        let instruction = Instruction::from(opcode);
+
+        match instruction {
+            Instruction::Unreachable => todo!(),
+            Instruction::Nop => todo!(),
+            Instruction::Block => todo!(),
+            Instruction::Loop => todo!(),
+            Instruction::If => todo!(),
+            Instruction::Else => todo!(),
+            Instruction::End => Ok(InstructionNode::End),
+            Instruction::Br => todo!(),
+            Instruction::BrIf => todo!(),
+            Instruction::BrTable => todo!(),
+            Instruction::Return => todo!(),
+            Instruction::Call => todo!(),
+            Instruction::CallIndirect => todo!(),
+            Instruction::Drop => todo!(),
+            Instruction::Select => todo!(),
+            Instruction::GetLocal => todo!(),
+            Instruction::SetLocal => todo!(),
+            Instruction::TeeLocal => todo!(),
+            Instruction::GetGlobal => todo!(),
+            Instruction::SetGlobal => todo!(),
+            Instruction::I32Load => todo!(),
+            Instruction::I64Load => todo!(),
+            Instruction::F32Load => todo!(),
+            Instruction::F64Load => todo!(),
+            Instruction::I32Load8S => todo!(),
+            Instruction::I32Load8U => todo!(),
+            Instruction::I32Load16S => todo!(),
+            Instruction::I32Load16U => todo!(),
+            Instruction::I64Load8S => todo!(),
+            Instruction::I64Load8U => todo!(),
+            Instruction::I64Load16S => todo!(),
+            Instruction::I64Load16U => todo!(),
+            Instruction::I64Load32S => todo!(),
+            Instruction::I64Load32U => todo!(),
+            Instruction::I32Store => todo!(),
+            Instruction::I64Store => todo!(),
+            Instruction::F32Store => todo!(),
+            Instruction::F64Store => todo!(),
+            Instruction::I32Store8 => todo!(),
+            Instruction::I32Store16 => todo!(),
+            Instruction::I64Store8 => todo!(),
+            Instruction::I64Store16 => todo!(),
+            Instruction::I64Store32 => todo!(),
+            Instruction::CurrentMemory => todo!(),
+            Instruction::GrowMemory => todo!(),
+            Instruction::I32Const => {
+                let (value, _) = Parser::read_i32(bytes).expect("Failed to parse i32 value");
+                let node = InstructionNode::I32Const(I32Const { value });
+                Ok(node)
+            }
+            Instruction::I64Const => todo!(),
+            Instruction::F32Const => todo!(),
+            Instruction::F64Const => todo!(),
+            Instruction::I32Eqz => todo!(),
+            Instruction::I32Eq => todo!(),
+            Instruction::I32Ne => todo!(),
+            Instruction::I32LtS => todo!(),
+            Instruction::I32LtU => todo!(),
+            Instruction::I32GtS => todo!(),
+            Instruction::I32GtU => todo!(),
+            Instruction::I32LeS => todo!(),
+            Instruction::I32LeU => todo!(),
+            Instruction::I32GeS => todo!(),
+            Instruction::I32GeU => todo!(),
+            Instruction::I64Eqz => todo!(),
+            Instruction::I64Eq => todo!(),
+            Instruction::I64Ne => todo!(),
+            Instruction::I64LtS => todo!(),
+            Instruction::I64LtU => todo!(),
+            Instruction::I64GtS => todo!(),
+            Instruction::I64GtU => todo!(),
+            Instruction::I64LeS => todo!(),
+            Instruction::I64LeU => todo!(),
+            Instruction::I64GeS => todo!(),
+            Instruction::I64GeU => todo!(),
+            Instruction::F32Eq => todo!(),
+            Instruction::F32Ne => todo!(),
+            Instruction::F32Lt => todo!(),
+            Instruction::F32Gt => todo!(),
+            Instruction::F32Le => todo!(),
+            Instruction::F32Ge => todo!(),
+            Instruction::F64Eq => todo!(),
+            Instruction::F64Ne => todo!(),
+            Instruction::F64Lt => todo!(),
+            Instruction::F64Gt => todo!(),
+            Instruction::F64Le => todo!(),
+            Instruction::F64Ge => todo!(),
+            Instruction::I32Clz => todo!(),
+            Instruction::I32Ctz => todo!(),
+            Instruction::I32Popcnt => todo!(),
+            Instruction::I32Add => todo!(),
+            Instruction::I32Sub => todo!(),
+            Instruction::I32Mul => todo!(),
+            Instruction::I32DivS => todo!(),
+            Instruction::I32DivU => todo!(),
+            Instruction::I32RemS => todo!(),
+            Instruction::I32RemU => todo!(),
+            Instruction::I32And => todo!(),
+            Instruction::I32Or => todo!(),
+            Instruction::I32Xor => todo!(),
+            Instruction::I32Shl => todo!(),
+            Instruction::I32ShrS => todo!(),
+            Instruction::I32ShrU => todo!(),
+            Instruction::I32Rotl => todo!(),
+            Instruction::I32Rotr => todo!(),
+            Instruction::I64Clz => todo!(),
+            Instruction::I64Ctz => todo!(),
+            Instruction::I64Popcnt => todo!(),
+            Instruction::I64Add => todo!(),
+            Instruction::I64Sub => todo!(),
+            Instruction::I64Mul => todo!(),
+            Instruction::I64DivS => todo!(),
+            Instruction::I64DivU => todo!(),
+            Instruction::I64RemS => todo!(),
+            Instruction::I64RemU => todo!(),
+            Instruction::I64And => todo!(),
+            Instruction::I64Or => todo!(),
+            Instruction::I64Xor => todo!(),
+            Instruction::I64Shl => todo!(),
+            Instruction::I64ShrS => todo!(),
+            Instruction::I64ShrU => todo!(),
+            Instruction::I64Rotl => todo!(),
+            Instruction::I64Rotr => todo!(),
+            Instruction::F32Abs => todo!(),
+            Instruction::F32Neg => todo!(),
+            Instruction::F32Ceil => todo!(),
+            Instruction::F32Floor => todo!(),
+            Instruction::F32Trunc => todo!(),
+            Instruction::F32Nearest => todo!(),
+            Instruction::F32Sqrt => todo!(),
+            Instruction::F32Add => todo!(),
+            Instruction::F32Sub => todo!(),
+            Instruction::F32Mul => todo!(),
+            Instruction::F32Div => todo!(),
+            Instruction::F32Min => todo!(),
+            Instruction::F32Max => todo!(),
+            Instruction::F32Copysign => todo!(),
+            Instruction::F64Abs => todo!(),
+            Instruction::F64Neg => todo!(),
+            Instruction::F64Ceil => todo!(),
+            Instruction::F64Floor => todo!(),
+            Instruction::F64Trunc => todo!(),
+            Instruction::F64Nearest => todo!(),
+            Instruction::F64Sqrt => todo!(),
+            Instruction::F64Add => todo!(),
+            Instruction::F64Sub => todo!(),
+            Instruction::F64Mul => todo!(),
+            Instruction::F64Div => todo!(),
+            Instruction::F64Min => todo!(),
+            Instruction::F64Max => todo!(),
+            Instruction::F64Copysign => todo!(),
+        }
     }
 
     /// functype = 0x60 (result type) (result type)
@@ -233,15 +413,15 @@ impl Parser {
         Ok((value, byte_count))
     }
 
-    fn read_i32(bytes: &mut Vec<u8>) -> Result<(isize, u32), Box<dyn Error>> {
-        let mut value: isize = 0;
+    fn read_i32(bytes: &mut Vec<u8>) -> Result<(i32, u32), Box<dyn Error>> {
+        let mut value: i32 = 0;
         let mut shift: u32 = 0;
         let mut byte_count: u32 = 0;
 
         loop {
             let byte = bytes[0];
             (*bytes).drain(0..1);
-            value |= isize::from(byte & 0x7F) << shift;
+            value |= i32::from(byte & 0x7F) << shift;
             shift += 7;
             byte_count += 1;
 

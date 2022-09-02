@@ -2,6 +2,7 @@ use std::env;
 
 mod module;
 mod node;
+mod instruction;
 mod parser;
 mod types;
 

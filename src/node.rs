@@ -27,11 +27,44 @@ pub struct CodeNode {
     pub function_body_size: u32,
     pub local_count: u32,
     pub locals: Vec<LocalEntryNode>,
-    pub expr: Vec<u8>,
+    pub expr: ExpressionNode,
 }
 
 #[derive(Debug)]
 pub struct LocalEntryNode {
     pub count: u32,
     pub val_type: ValueType,
+}
+
+#[derive(Debug)]
+pub struct ExpressionNode {
+    pub instructions: Vec<InstructionNode>,
+}
+
+// #[derive(Debug)]
+// pub struct InstructionNode {
+//     instruction: Instruction,
+// }
+
+#[derive(Debug)]
+pub enum InstructionNode {
+    I32Const(I32Const),
+    End,
+    // Unreachable,
+    // Nop,
+    // Block(BlockTypeNode),
+    // Loop(BlockTypeNode),
+    // If(BlockTypeNode),
+    // Else,
+    // End,
+    // Br(u32),
+    // BrIf(u32),
+    // BrTable(Vec<u32>, u32),
+    // Return,
+    // Call(u32),
+}
+
+#[derive(Debug)]
+pub struct I32Const {
+    pub value: i32,
 }
