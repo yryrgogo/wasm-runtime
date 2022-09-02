@@ -42,6 +42,42 @@ pub struct ExpressionNode {
 }
 
 #[derive(Debug)]
+pub struct ExportNode {
+    pub name: Vec<u8>,
+    pub export_desc: ExportDescNode,
+}
+
+#[derive(Debug)]
+pub struct ExportDescNode {
+    pub export_type: ExportType,
+    pub index: u32,
+}
+
+#[derive(Debug)]
+pub enum ExportType {
+    Function = 0x00,
+    // Table = 0x01,
+    // Memory = 0x02,
+    // Global = 0x03,
+}
+
+impl From<u8> for ExportType {
+    fn from(x: u8) -> ExportType {
+        match x {
+            0x00 => ExportType::Function,
+            // 0x01 => ExportType::Table,
+            // 0x02 => ExportType::Memory,
+            // 0x03 => ExportType::Global,
+            _ => unreachable!("{} is an invalid value in ExportType", x),
+        }
+    }
+}
+
+//
+// instructions
+//
+
+#[derive(Debug)]
 pub enum InstructionNode {
     I32Const(I32ConstInstructionNode),
     End(EndInstructionNode),

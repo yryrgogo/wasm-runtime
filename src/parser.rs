@@ -2,13 +2,15 @@ use super::types::NumberType;
 use crate::{
     instruction::Instruction,
     module::{
-        section::{CodeSectionNode, FunctionSectionNode, SectionId, TypeSectionNode},
+        section::{
+            CodeSectionNode, ExportSectionNode, FunctionSectionNode, SectionId, TypeSectionNode,
+        },
         ModuleNode,
     },
     node::{
-        CodeNode, EndInstructionNode, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
-        I32ConstInstructionNode, InstructionNode, LocalEntryNode, ResultTypeNode,
-        SetLocalInstructionNode,
+        CodeNode, EndInstructionNode, ExportDescNode, ExportNode, ExportType, ExpressionNode,
+        FunctionTypeNode, GetLocalInstructionNode, I32ConstInstructionNode, InstructionNode,
+        LocalEntryNode, ResultTypeNode, SetLocalInstructionNode,
     },
     types::ValueType,
 };
@@ -71,7 +73,12 @@ impl Parser {
                 (*module).function_section = Some(section);
             }
             SectionId::GlobalSectionId => todo!("global section"),
-            SectionId::ExportSectionId => todo!("export section"),
+            SectionId::ExportSectionId => {
+                let section = self
+                    .export_section(&mut section_bytes)
+                    .expect("Failed to parse export section");
+                (*module).export_section = Some(section);
+            }
             SectionId::StartSectionId => todo!("start section"),
             SectionId::CodeSectionId => {
                 let section = self
@@ -111,6 +118,37 @@ impl Parser {
         }
 
         Ok(FunctionSectionNode { type_indexes })
+    }
+
+    /// export section = section7(vec((export)*))
+    fn export_section(&self, bytes: &mut Vec<u8>) -> Result<ExportSectionNode, Box<dyn Error>> {
+        let (count, _) = Parser::read_u32(bytes).expect("Failed to parse vector size");
+
+        let mut exports: Vec<ExportNode> = vec![];
+        for _ in 0..count {
+            let (name_size, _) = Parser::read_u32(bytes).expect("Failed to parse name size");
+            let name_bytes =
+                Parser::read_bytes(bytes, name_size as usize).expect("Failed to parse name bytes");
+            let export_desc = self
+                .export_desc(bytes)
+                .expect("Failed to parse export desc");
+            exports.push(ExportNode {
+                name: name_bytes,
+                export_desc,
+            });
+        }
+
+        Ok(ExportSectionNode { exports })
+    }
+
+    fn export_desc(&self, bytes: &mut Vec<u8>) -> Result<ExportDescNode, Box<dyn Error>> {
+        let id = Parser::read_u8(bytes).expect("Failed to parse export desc id");
+        let (index, _) = Parser::read_u32(bytes).expect("Failed to parse export desc index");
+
+        Ok(ExportDescNode {
+            export_type: ExportType::from(id),
+            index: index,
+        })
     }
 
     /// code section = section10(vec((code)*))
@@ -393,6 +431,12 @@ impl Parser {
         let byte = bytes[0];
         (*bytes).drain(0..1);
         Ok(byte)
+    }
+
+    pub fn read_bytes(bytes: &mut Vec<u8>, size: usize) -> Result<Vec<u8>, Box<dyn Error>> {
+        let b = bytes[0..size].to_vec();
+        (*bytes).drain(0..size);
+        Ok(b)
     }
 
     pub fn read_u32(bytes: &mut Vec<u8>) -> Result<(u32, u32), Box<dyn Error>> {

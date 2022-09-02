@@ -1,4 +1,4 @@
-use crate::node::{CodeNode, FunctionTypeNode};
+use crate::node::{CodeNode, ExportNode, FunctionTypeNode};
 
 pub enum SectionId {
     CustomSectionId = 0x0,
@@ -40,6 +40,11 @@ pub struct TypeSectionNode {
 #[derive(Debug)]
 pub struct FunctionSectionNode {
     pub type_indexes: Vec<u32>,
+}
+
+#[derive(Debug)]
+pub struct ExportSectionNode {
+    pub exports: Vec<ExportNode>,
 }
 
 #[derive(Debug)]
