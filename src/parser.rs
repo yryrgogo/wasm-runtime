@@ -6,8 +6,8 @@ use crate::{
         ModuleNode,
     },
     node::{
-        CodeNode, ExpressionNode, FunctionTypeNode, I32Const, InstructionNode, LocalEntryNode,
-        ResultTypeNode,
+        CodeNode, EndNode, ExpressionNode, FunctionTypeNode, I32ConstNode, InstructionNode,
+        LocalEntryNode, ResultTypeNode,
     },
     types::ValueType,
 };
@@ -37,8 +37,6 @@ impl Parser {
             self.section(bytes, &mut module)
                 .expect("Failed to parse section");
         }
-
-        println!("{:#?}", module);
 
         Ok(module)
     }
@@ -146,24 +144,17 @@ impl Parser {
         let local_entries_size = init_size - bytes.len();
         let mut code =
             bytes[0..(function_body_size as usize - local_entries_size as usize)].to_vec();
-        // let end = code.pop();
-        // if end != Some(0x0b) {
-        //     panic!("Invalid function body");
-        // }
 
         let mut instructions: Vec<InstructionNode> = vec![];
         loop {
             let instruction = self
                 .instruction(&mut code)
                 .expect("Failed to parse instruction");
-            match instruction {
-                InstructionNode::End => {
-                    instructions.push(instruction);
-                    break;
-                }
-                _ => {
-                    instructions.push(instruction);
-                }
+            if let InstructionNode::End(end) = instruction {
+                instructions.push(InstructionNode::End(end));
+                break;
+            } else {
+                instructions.push(instruction);
             }
         }
 
@@ -199,7 +190,7 @@ impl Parser {
             Instruction::Loop => todo!(),
             Instruction::If => todo!(),
             Instruction::Else => todo!(),
-            Instruction::End => Ok(InstructionNode::End),
+            Instruction::End => Ok(InstructionNode::End(EndNode { opcode })),
             Instruction::Br => todo!(),
             Instruction::BrIf => todo!(),
             Instruction::BrTable => todo!(),
@@ -240,7 +231,7 @@ impl Parser {
             Instruction::GrowMemory => todo!(),
             Instruction::I32Const => {
                 let (value, _) = Parser::read_i32(bytes).expect("Failed to parse i32 value");
-                let node = InstructionNode::I32Const(I32Const { value });
+                let node = InstructionNode::I32Const(I32ConstNode { opcode, value });
                 Ok(node)
             }
             Instruction::I64Const => todo!(),

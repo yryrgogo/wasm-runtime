@@ -41,15 +41,10 @@ pub struct ExpressionNode {
     pub instructions: Vec<InstructionNode>,
 }
 
-// #[derive(Debug)]
-// pub struct InstructionNode {
-//     instruction: Instruction,
-// }
-
 #[derive(Debug)]
 pub enum InstructionNode {
-    I32Const(I32Const),
-    End,
+    I32Const(I32ConstNode),
+    End(EndNode),
     // Unreachable,
     // Nop,
     // Block(BlockTypeNode),
@@ -65,6 +60,12 @@ pub enum InstructionNode {
 }
 
 #[derive(Debug)]
-pub struct I32Const {
+pub struct I32ConstNode {
+    pub opcode: u8,
     pub value: i32,
+}
+
+#[derive(Debug)]
+pub struct EndNode {
+    pub opcode: u8,
 }
