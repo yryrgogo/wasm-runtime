@@ -83,6 +83,18 @@ pub enum InstructionNode {
     End(EndInstructionNode),
     GetLocal(GetLocalInstructionNode),
     SetLocal(SetLocalInstructionNode),
+    I32Add(I32AddInstructionNode),
+    // I32Sub(I32SubInstructionNode),
+    // I32RemU(I32RemUInstructionNode),
+    // I32Shl(I32ShlInstructionNode),
+    // I32Eqz(I32EqzInstructionNode),
+    // I32Eq(I32EqInstructionNode),
+    // I32LtS(I32LtSInstructionNode),
+    // I32LtU(I32LtUInstructionNode),
+    // I32GtS(I32GtSInstructionNode),
+    // I32GtU(I32GtUInstructionNode),
+    // I64Add(I32AddInstructionNode),
+    // I64Sub(I32SubInstructionNode),
     // Unreachable,
     // Nop,
     // Block(BlockTypeNode),
@@ -118,4 +130,63 @@ pub struct GetLocalInstructionNode {
 pub struct SetLocalInstructionNode {
     pub opcode: u8,
     pub index: u32,
+}
+
+#[derive(Debug)]
+pub struct I32AddInstructionNode {
+    pub opcode: u8,
+}
+#[derive(Debug)]
+pub struct I32SubInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I64AddInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I64SubInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32RemUInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32ShlInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32EqzInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32EqInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32LtSInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32LtUInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32GtSInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32GtUInstructionNode {
+    pub opcode: u8,
 }
