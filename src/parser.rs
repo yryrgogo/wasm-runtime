@@ -6,8 +6,9 @@ use crate::{
         ModuleNode,
     },
     node::{
-        CodeNode, EndNode, ExpressionNode, FunctionTypeNode, I32ConstNode, InstructionNode,
-        LocalEntryNode, ResultTypeNode,
+        CodeNode, EndInstructionNode, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
+        I32ConstInstructionNode, InstructionNode, LocalEntryNode, ResultTypeNode,
+        SetLocalInstructionNode,
     },
     types::ValueType,
 };
@@ -190,7 +191,7 @@ impl Parser {
             Instruction::Loop => todo!(),
             Instruction::If => todo!(),
             Instruction::Else => todo!(),
-            Instruction::End => Ok(InstructionNode::End(EndNode { opcode })),
+            Instruction::End => Ok(InstructionNode::End(EndInstructionNode { opcode })),
             Instruction::Br => todo!(),
             Instruction::BrIf => todo!(),
             Instruction::BrTable => todo!(),
@@ -199,8 +200,20 @@ impl Parser {
             Instruction::CallIndirect => todo!(),
             Instruction::Drop => todo!(),
             Instruction::Select => todo!(),
-            Instruction::GetLocal => todo!(),
-            Instruction::SetLocal => todo!(),
+            Instruction::GetLocal => {
+                let (index, _) = Parser::read_u32(bytes).expect("Failed to parse get local index");
+                Ok(InstructionNode::GetLocal(GetLocalInstructionNode {
+                    opcode,
+                    index,
+                }))
+            }
+            Instruction::SetLocal => {
+                let (index, _) = Parser::read_u32(bytes).expect("Failed to parse set local index");
+                Ok(InstructionNode::SetLocal(SetLocalInstructionNode {
+                    opcode,
+                    index,
+                }))
+            }
             Instruction::TeeLocal => todo!(),
             Instruction::GetGlobal => todo!(),
             Instruction::SetGlobal => todo!(),
@@ -230,8 +243,8 @@ impl Parser {
             Instruction::CurrentMemory => todo!(),
             Instruction::GrowMemory => todo!(),
             Instruction::I32Const => {
-                let (value, _) = Parser::read_i32(bytes).expect("Failed to parse i32 value");
-                let node = InstructionNode::I32Const(I32ConstNode { opcode, value });
+                let (value, _) = Parser::read_i32(bytes).expect("Failed to parse const i32");
+                let node = InstructionNode::I32Const(I32ConstInstructionNode { opcode, value });
                 Ok(node)
             }
             Instruction::I64Const => todo!(),

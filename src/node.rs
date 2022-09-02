@@ -43,8 +43,10 @@ pub struct ExpressionNode {
 
 #[derive(Debug)]
 pub enum InstructionNode {
-    I32Const(I32ConstNode),
-    End(EndNode),
+    I32Const(I32ConstInstructionNode),
+    End(EndInstructionNode),
+    GetLocal(GetLocalInstructionNode),
+    SetLocal(SetLocalInstructionNode),
     // Unreachable,
     // Nop,
     // Block(BlockTypeNode),
@@ -60,12 +62,24 @@ pub enum InstructionNode {
 }
 
 #[derive(Debug)]
-pub struct I32ConstNode {
+pub struct I32ConstInstructionNode {
     pub opcode: u8,
     pub value: i32,
 }
 
 #[derive(Debug)]
-pub struct EndNode {
+pub struct EndInstructionNode {
     pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct GetLocalInstructionNode {
+    pub opcode: u8,
+    pub index: u32,
+}
+
+#[derive(Debug)]
+pub struct SetLocalInstructionNode {
+    pub opcode: u8,
+    pub index: u32,
 }
