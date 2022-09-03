@@ -1,4 +1,4 @@
-use crate::types::{NumberType, ValueType};
+use crate::types::{BlockType, ValueType};
 
 // https://webassembly.github.io/spec/core/binary/types.html#function-types
 #[derive(Debug)]
@@ -79,9 +79,14 @@ impl From<u8> for ExportType {
 
 #[derive(Debug)]
 pub enum InstructionNode {
-    I32Const(I32ConstInstructionNode),
-    End(EndInstructionNode),
+    Block(BlockInstructionNode),
+    Loop(LoopInstructionNode),
+    If(IfInstructionNode),
     Else(ElseInstructionNode),
+    Br(BrInstructionNode),
+    BrIf(BrIfInstructionNode),
+    End(EndInstructionNode),
+    I32Const(I32ConstInstructionNode),
     GetLocal(GetLocalInstructionNode),
     SetLocal(SetLocalInstructionNode),
     I32Add(I32AddInstructionNode),
@@ -100,13 +105,6 @@ pub enum InstructionNode {
     // I64Sub(I32SubInstructionNode),
     // Unreachable,
     // Nop,
-    // Block(BlockTypeNode),
-    // Loop(BlockTypeNode),
-    If(IfInstructionNode),
-    // Else,
-    // End,
-    // Br(u32),
-    // BrIf(u32),
     // BrTable(Vec<u32>, u32),
     // Return,
     // Call(u32),
@@ -218,22 +216,27 @@ pub struct IfInstructionNode {
 }
 
 #[derive(Debug)]
-pub enum BlockType {
-    // Empty,
-    ValType(ValueType),
-    // S33,
+pub struct BlockInstructionNode {
+    pub opcode: u8,
+    pub block_type: BlockType,
+    pub expr: ExpressionNode,
 }
 
-impl From<u8> for BlockType {
-    fn from(x: u8) -> BlockType {
-        match x {
-            // 0x40 => BlockType::Empty,
-            0x7F => BlockType::ValType(ValueType::NumberType(NumberType::I32)),
-            // 0x7E => BlockType::ValType(ValueType::NumberType(NumberType::I64)),
-            // 0x7D => BlockType::ValType(ValueType::NumberType(NumberType::F32)),
-            // 0x7C => BlockType::ValType(ValueType::NumberType(NumberType::F64)),
-            // 0x70 => BlockType::S33,
-            _ => unreachable!("{} is an invalid value in BlockType", x),
-        }
-    }
+#[derive(Debug)]
+pub struct LoopInstructionNode {
+    pub opcode: u8,
+    pub block_type: BlockType,
+    pub expr: ExpressionNode,
+}
+
+#[derive(Debug)]
+pub struct BrInstructionNode {
+    pub opcode: u8,
+    pub depth: u32,
+}
+
+#[derive(Debug)]
+pub struct BrIfInstructionNode {
+    pub opcode: u8,
+    pub depth: u32,
 }

@@ -8,12 +8,13 @@ use crate::{
         ModuleNode,
     },
     node::{
-        BlockType, CodeNode, ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode,
-        ExportType, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
-        I32AddInstructionNode, I32ConstInstructionNode, I32GeSInstructionNode, IfInstructionNode,
-        InstructionNode, LocalEntryNode, ResultTypeNode, SetLocalInstructionNode,
+        BlockInstructionNode, BrIfInstructionNode, BrInstructionNode, CodeNode,
+        ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode, ExportType,
+        ExpressionNode, FunctionTypeNode, GetLocalInstructionNode, I32AddInstructionNode,
+        I32ConstInstructionNode, I32GeSInstructionNode, IfInstructionNode, InstructionNode,
+        LocalEntryNode, LoopInstructionNode, ResultTypeNode, SetLocalInstructionNode,
     },
-    types::ValueType,
+    types::{BlockType, ValueType},
 };
 use std::error::Error;
 
@@ -241,8 +242,24 @@ impl Parser {
         match instruction {
             Instruction::Unreachable => todo!(),
             Instruction::Nop => todo!(),
-            Instruction::Block => todo!(),
-            Instruction::Loop => todo!(),
+            Instruction::Block => {
+                let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let expr = self.expression(bytes).expect("Failed to parse expression");
+                Ok(InstructionNode::Block(BlockInstructionNode {
+                    opcode,
+                    block_type,
+                    expr,
+                }))
+            }
+            Instruction::Loop => {
+                let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let expr = self.expression(bytes).expect("Failed to parse expression");
+                Ok(InstructionNode::Loop(LoopInstructionNode {
+                    opcode,
+                    block_type,
+                    expr,
+                }))
+            }
             Instruction::If => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
                 let then_expr = self
@@ -274,8 +291,14 @@ impl Parser {
                 Ok(InstructionNode::Else(else_instr))
             }
             Instruction::End => Ok(InstructionNode::End(EndInstructionNode { opcode })),
-            Instruction::Br => todo!(),
-            Instruction::BrIf => todo!(),
+            Instruction::Br => {
+                let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br depth");
+                Ok(InstructionNode::Br(BrInstructionNode { opcode, depth }))
+            }
+            Instruction::BrIf => {
+                let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br if depth");
+                Ok(InstructionNode::BrIf(BrIfInstructionNode { opcode, depth }))
+            }
             Instruction::BrTable => todo!(),
             Instruction::Return => todo!(),
             Instruction::Call => todo!(),

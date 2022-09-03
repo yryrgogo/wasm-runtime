@@ -60,3 +60,24 @@ pub enum ValueType {
     // VectorType(VectorType),
     // ReferenceType(ReferenceType),
 }
+
+#[derive(Debug)]
+pub enum BlockType {
+    Empty,
+    ValType(ValueType),
+    // S33,
+}
+
+impl From<u8> for BlockType {
+    fn from(x: u8) -> BlockType {
+        match x {
+            0x40 => BlockType::Empty,
+            0x7F => BlockType::ValType(ValueType::NumberType(NumberType::I32)),
+            // 0x7E => BlockType::ValType(ValueType::NumberType(NumberType::I64)),
+            // 0x7D => BlockType::ValType(ValueType::NumberType(NumberType::F32)),
+            // 0x7C => BlockType::ValType(ValueType::NumberType(NumberType::F64)),
+            // 0x70 => BlockType::S33,
+            _ => unreachable!("{} is an invalid value in BlockType", x),
+        }
+    }
+}
