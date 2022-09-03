@@ -85,6 +85,7 @@ pub enum InstructionNode {
     Else(ElseInstructionNode),
     Br(BrInstructionNode),
     BrIf(BrIfInstructionNode),
+    Call(CallInstructionNode),
     End(EndInstructionNode),
     I32Const(I32ConstInstructionNode),
     GetLocal(GetLocalInstructionNode),
@@ -107,7 +108,6 @@ pub enum InstructionNode {
     // Nop,
     // BrTable(Vec<u32>, u32),
     // Return,
-    // Call(u32),
 }
 
 #[derive(Debug)]
@@ -239,4 +239,10 @@ pub struct BrInstructionNode {
 pub struct BrIfInstructionNode {
     pub opcode: u8,
     pub depth: u32,
+}
+
+#[derive(Debug)]
+pub struct CallInstructionNode {
+    pub opcode: u8,
+    pub function_index: u32,
 }

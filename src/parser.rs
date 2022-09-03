@@ -8,8 +8,8 @@ use crate::{
         ModuleNode,
     },
     node::{
-        BlockInstructionNode, BrIfInstructionNode, BrInstructionNode, CodeNode,
-        ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode, ExportType,
+        BlockInstructionNode, BrIfInstructionNode, BrInstructionNode, CallInstructionNode,
+        CodeNode, ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode, ExportType,
         ExpressionNode, FunctionTypeNode, GetLocalInstructionNode, I32AddInstructionNode,
         I32ConstInstructionNode, I32GeSInstructionNode, IfInstructionNode, InstructionNode,
         LocalEntryNode, LoopInstructionNode, ResultTypeNode, SetLocalInstructionNode,
@@ -58,6 +58,8 @@ impl Parser {
         let (size, _) = Parser::read_u32(bytes).expect("Failed to parse section size");
         let mut section_bytes = bytes[0..(size as usize)].to_vec();
         (*bytes).drain(0..(size as usize));
+
+        dbg!("section id: {}", id);
 
         match SectionId::from(id) {
             SectionId::CustomSectionId => todo!("Custom section"),
@@ -169,7 +171,6 @@ impl Parser {
     fn code(&self, bytes: &mut Vec<u8>) -> Result<CodeNode, Box<dyn Error>> {
         let (function_body_size, _) =
             Parser::read_u32(bytes).expect("Failed to parse function body size");
-        let init_size = bytes.len();
 
         let (local_count, _) =
             Parser::read_u32(bytes).expect("Failed to parse function body local count");
@@ -182,13 +183,7 @@ impl Parser {
             local_entries.push(local_entry);
         }
 
-        let local_entries_size = init_size - bytes.len();
-        let mut code =
-            bytes[0..(function_body_size as usize - local_entries_size as usize)].to_vec();
-
-        let expr = self
-            .expression(&mut code)
-            .expect("Failed to parse expression");
+        let expr = self.expression(bytes).expect("Failed to parse expression");
 
         Ok(CodeNode {
             function_body_size,
@@ -231,6 +226,8 @@ impl Parser {
                 }
             }
         }
+
+        dbg!("instructions: {:?}", &instructions);
 
         Ok(ExpressionNode { instructions })
     }
@@ -301,7 +298,13 @@ impl Parser {
             }
             Instruction::BrTable => todo!(),
             Instruction::Return => todo!(),
-            Instruction::Call => todo!(),
+            Instruction::Call => {
+                let (index, _) = Parser::read_u32(bytes).expect("Failed to parse call index");
+                Ok(InstructionNode::Call(CallInstructionNode {
+                    opcode,
+                    function_index: index,
+                }))
+            }
             Instruction::CallIndirect => todo!(),
             Instruction::Drop => todo!(),
             Instruction::Select => todo!(),
