@@ -47,13 +47,13 @@ pub struct ExportNode {
     pub export_desc: ExportDescNode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ExportDescNode {
     pub export_type: ExportType,
     pub index: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ExportType {
     Function = 0x00,
     // Table = 0x01,
