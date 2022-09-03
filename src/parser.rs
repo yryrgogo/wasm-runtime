@@ -227,8 +227,6 @@ impl Parser {
             }
         }
 
-        dbg!("instructions: {:?}", &instructions);
-
         Ok(ExpressionNode { instructions })
     }
 

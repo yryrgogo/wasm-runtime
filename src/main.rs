@@ -170,4 +170,44 @@ mod parser_tests {
         }
         assert_eq!(code_section_bodies[0].expr.instructions.len(), 7);
     }
+
+    #[test]
+    fn parse_increment_module() {
+        let file_path = "test/fixtures/increment.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let module = parser.parse(&mut bytes).expect("Failed to parse");
+
+        let type_section_function_types = module.type_section.unwrap().function_types;
+        assert_eq!(type_section_function_types.len(), 2);
+        assert_eq!(type_section_function_types[0].params.val_types.len(), 2);
+        assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
+        assert_eq!(type_section_function_types[1].params.val_types.len(), 1);
+        assert_eq!(type_section_function_types[1].returns.val_types.len(), 1);
+
+        assert_eq!(module.function_section.unwrap().type_indexes, [0, 1]);
+
+        let export_section_exports = module.export_section.unwrap().exports;
+        assert_eq!(export_section_exports.len(), 1);
+        assert_eq!(
+            export_section_exports[0].name,
+            [105, 110, 99, 114, 101, 109, 101, 110, 116]
+        );
+        assert_eq!(export_section_exports[0].export_desc.index, 1);
+        assert_eq!(
+            export_section_exports[0].export_desc.export_type,
+            ExportType::Function
+        );
+
+        let code_section_bodies = module.code_section.unwrap().bodies;
+        assert_eq!(code_section_bodies.len(), 2);
+        assert_eq!(code_section_bodies[0].locals.len(), 0);
+        assert_eq!(code_section_bodies[0].local_count, 0);
+        assert_eq!(code_section_bodies[0].function_body_size, 7);
+        assert_eq!(code_section_bodies[0].expr.instructions.len(), 4);
+        assert_eq!(code_section_bodies[1].locals.len(), 0);
+        assert_eq!(code_section_bodies[1].local_count, 0);
+        assert_eq!(code_section_bodies[1].function_body_size, 8);
+        assert_eq!(code_section_bodies[1].expr.instructions.len(), 4);
+    }
 }
