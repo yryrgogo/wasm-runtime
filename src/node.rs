@@ -1,4 +1,4 @@
-use crate::types::ValueType;
+use crate::types::{NumberType, ValueType};
 
 // https://webassembly.github.io/spec/core/binary/types.html#function-types
 #[derive(Debug)]
@@ -81,6 +81,7 @@ impl From<u8> for ExportType {
 pub enum InstructionNode {
     I32Const(I32ConstInstructionNode),
     End(EndInstructionNode),
+    Else(ElseInstructionNode),
     GetLocal(GetLocalInstructionNode),
     SetLocal(SetLocalInstructionNode),
     I32Add(I32AddInstructionNode),
@@ -91,15 +92,17 @@ pub enum InstructionNode {
     // I32Eq(I32EqInstructionNode),
     // I32LtS(I32LtSInstructionNode),
     // I32LtU(I32LtUInstructionNode),
-    // I32GtS(I32GtSInstructionNode),
-    // I32GtU(I32GtUInstructionNode),
+    I32GeS(I32GeSInstructionNode),
+    I32GeU(I32GeUInstructionNode),
+    I32GtS(I32GtSInstructionNode),
+    I32GtU(I32GtUInstructionNode),
     // I64Add(I32AddInstructionNode),
     // I64Sub(I32SubInstructionNode),
     // Unreachable,
     // Nop,
     // Block(BlockTypeNode),
     // Loop(BlockTypeNode),
-    // If(BlockTypeNode),
+    If(IfInstructionNode),
     // Else,
     // End,
     // Br(u32),
@@ -113,6 +116,11 @@ pub enum InstructionNode {
 pub struct I32ConstInstructionNode {
     pub opcode: u8,
     pub value: i32,
+}
+
+#[derive(Debug)]
+pub struct ElseInstructionNode {
+    pub opcode: u8,
 }
 
 #[derive(Debug)]
@@ -182,6 +190,16 @@ pub struct I32LtUInstructionNode {
 }
 
 #[derive(Debug)]
+pub struct I32GeSInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct I32GeUInstructionNode {
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
 pub struct I32GtSInstructionNode {
     pub opcode: u8,
 }
@@ -189,4 +207,33 @@ pub struct I32GtSInstructionNode {
 #[derive(Debug)]
 pub struct I32GtUInstructionNode {
     pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub struct IfInstructionNode {
+    pub opcode: u8,
+    pub block_type: BlockType,
+    pub then_expr: ExpressionNode,
+    pub else_expr: Option<ExpressionNode>,
+}
+
+#[derive(Debug)]
+pub enum BlockType {
+    // Empty,
+    ValType(ValueType),
+    // S33,
+}
+
+impl From<u8> for BlockType {
+    fn from(x: u8) -> BlockType {
+        match x {
+            // 0x40 => BlockType::Empty,
+            0x7F => BlockType::ValType(ValueType::NumberType(NumberType::I32)),
+            // 0x7E => BlockType::ValType(ValueType::NumberType(NumberType::I64)),
+            // 0x7D => BlockType::ValType(ValueType::NumberType(NumberType::F32)),
+            // 0x7C => BlockType::ValType(ValueType::NumberType(NumberType::F64)),
+            // 0x70 => BlockType::S33,
+            _ => unreachable!("{} is an invalid value in BlockType", x),
+        }
+    }
 }

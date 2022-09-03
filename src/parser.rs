@@ -8,8 +8,9 @@ use crate::{
         ModuleNode,
     },
     node::{
-        CodeNode, EndInstructionNode, ExportDescNode, ExportNode, ExportType, ExpressionNode,
-        FunctionTypeNode, GetLocalInstructionNode, I32AddInstructionNode, I32ConstInstructionNode,
+        BlockType, CodeNode, ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode,
+        ExportType, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
+        I32AddInstructionNode, I32ConstInstructionNode, I32GeSInstructionNode, IfInstructionNode,
         InstructionNode, LocalEntryNode, ResultTypeNode, SetLocalInstructionNode,
     },
     types::ValueType,
@@ -184,24 +185,15 @@ impl Parser {
         let mut code =
             bytes[0..(function_body_size as usize - local_entries_size as usize)].to_vec();
 
-        let mut instructions: Vec<InstructionNode> = vec![];
-        loop {
-            let instruction = self
-                .instruction(&mut code)
-                .expect("Failed to parse instruction");
-            if let InstructionNode::End(end) = instruction {
-                instructions.push(InstructionNode::End(end));
-                break;
-            } else {
-                instructions.push(instruction);
-            }
-        }
+        let expr = self
+            .expression(&mut code)
+            .expect("Failed to parse expression");
 
         Ok(CodeNode {
             function_body_size,
             local_count,
             locals: local_entries,
-            expr: ExpressionNode { instructions },
+            expr,
         })
     }
 
@@ -218,6 +210,30 @@ impl Parser {
         })
     }
 
+    fn expression(&self, bytes: &mut Vec<u8>) -> Result<ExpressionNode, Box<dyn Error>> {
+        let mut instructions: Vec<InstructionNode> = vec![];
+        loop {
+            let instruction = self
+                .instruction(bytes)
+                .expect("Failed to parse instruction");
+            match instruction {
+                InstructionNode::End(end_instr) => {
+                    instructions.push(InstructionNode::End(end_instr));
+                    break;
+                }
+                InstructionNode::Else(else_instr) => {
+                    instructions.push(InstructionNode::Else(else_instr));
+                    break;
+                }
+                _ => {
+                    instructions.push(instruction);
+                }
+            }
+        }
+
+        Ok(ExpressionNode { instructions })
+    }
+
     fn instruction(&self, bytes: &mut Vec<u8>) -> Result<InstructionNode, Box<dyn Error>> {
         let opcode = Parser::read_u8(bytes).expect("Failed to parse opcode");
         let instruction = Instruction::from(opcode);
@@ -227,8 +243,36 @@ impl Parser {
             Instruction::Nop => todo!(),
             Instruction::Block => todo!(),
             Instruction::Loop => todo!(),
-            Instruction::If => todo!(),
-            Instruction::Else => todo!(),
+            Instruction::If => {
+                let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let then_expr = self
+                    .expression(bytes)
+                    .expect("Failed to parse if-then expression");
+                let last_instr = then_expr.instructions.last().unwrap();
+                match last_instr {
+                    InstructionNode::Else(_) => {
+                        let else_expr = self
+                            .expression(bytes)
+                            .expect("Failed to parse if-else expression");
+                        Ok(InstructionNode::If(IfInstructionNode {
+                            block_type,
+                            then_expr,
+                            else_expr: Some(else_expr),
+                            opcode,
+                        }))
+                    }
+                    _ => Ok(InstructionNode::If(IfInstructionNode {
+                        block_type,
+                        then_expr,
+                        else_expr: None,
+                        opcode,
+                    })),
+                }
+            }
+            Instruction::Else => {
+                let else_instr = ElseInstructionNode { opcode };
+                Ok(InstructionNode::Else(else_instr))
+            }
             Instruction::End => Ok(InstructionNode::End(EndInstructionNode { opcode })),
             Instruction::Br => todo!(),
             Instruction::BrIf => todo!(),
@@ -297,7 +341,10 @@ impl Parser {
             Instruction::I32GtU => todo!(),
             Instruction::I32LeS => todo!(),
             Instruction::I32LeU => todo!(),
-            Instruction::I32GeS => todo!(),
+            Instruction::I32GeS => {
+                let node = InstructionNode::I32GeS(I32GeSInstructionNode { opcode });
+                Ok(node)
+            }
             Instruction::I32GeU => todo!(),
             Instruction::I64Eqz => todo!(),
             Instruction::I64Eq => todo!(),
@@ -428,6 +475,12 @@ impl Parser {
     fn number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberType, Box<dyn Error>> {
         let byte = Parser::read_u8(bytes).expect("Failed to read number type id");
         Ok(NumberType::from(byte))
+    }
+
+    fn block_type(&self, bytes: &mut Vec<u8>) -> Result<BlockType, Box<dyn Error>> {
+        let byte = Parser::read_u8(bytes).expect("Failed to read block type id");
+        let block_type = BlockType::from(byte);
+        Ok(block_type)
     }
 
     pub fn read_u8(bytes: &mut Vec<u8>) -> Result<u8, Box<dyn Error>> {
