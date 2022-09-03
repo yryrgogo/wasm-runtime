@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum NumberType {
     I32,
     I64,
@@ -54,14 +54,14 @@ impl From<u8> for ReferenceType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ValueType {
     NumberType(NumberType),
     // VectorType(VectorType),
     // ReferenceType(ReferenceType),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BlockType {
     Empty,
     ValType(ValueType),

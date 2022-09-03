@@ -126,4 +126,48 @@ mod parser_tests {
         assert_eq!(code_section_bodies[0].function_body_size, 15);
         assert_eq!(code_section_bodies[0].expr.instructions.len(), 5);
     }
+
+    #[test]
+    fn parse_loop_module() {
+        let file_path = "test/fixtures/loop.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let module = parser.parse(&mut bytes).expect("Failed to parse");
+
+        let type_section_function_types = module.type_section.unwrap().function_types;
+        assert_eq!(type_section_function_types[0].params.val_types.len(), 0);
+        assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
+
+        assert_eq!(module.function_section.unwrap().type_indexes, [0]);
+
+        let export_section_exports = module.export_section.unwrap().exports;
+        assert_eq!(export_section_exports.len(), 1);
+        assert_eq!(export_section_exports[0].name, [108, 111, 111, 112]);
+        assert_eq!(export_section_exports[0].export_desc.index, 0);
+        assert_eq!(
+            export_section_exports[0].export_desc.export_type,
+            ExportType::Function
+        );
+
+        let code_section_bodies = module.code_section.unwrap().bodies;
+        assert_eq!(code_section_bodies.len(), 1);
+        assert_eq!(code_section_bodies[0].locals.len(), 1);
+        assert_eq!(code_section_bodies[0].local_count, 1);
+        assert_eq!(code_section_bodies[0].function_body_size, 43);
+        match &code_section_bodies[0].expr.instructions[4] {
+            node::InstructionNode::Block(block_node) => {
+                assert_eq!(block_node.block_type, types::BlockType::Empty);
+                assert_eq!(block_node.expr.instructions.len(), 2);
+                match &block_node.expr.instructions[0] {
+                    node::InstructionNode::Loop(loop_node) => {
+                        assert_eq!(loop_node.block_type, types::BlockType::Empty);
+                        assert_eq!(loop_node.expr.instructions.len(), 14);
+                    }
+                    _ => panic!("Expected loop node"),
+                }
+            }
+            _ => panic!("Expected block node"),
+        }
+        assert_eq!(code_section_bodies[0].expr.instructions.len(), 7);
+    }
 }
