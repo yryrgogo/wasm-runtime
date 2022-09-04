@@ -29,10 +29,9 @@ impl Parser {
 
     pub fn parse(&self, bytes: &mut Vec<u8>) -> Result<ModuleNode, Box<dyn Error>> {
         let (magic, version) = self.module_header(bytes).expect("Invalid header");
-        ModuleNode::validate_magic(&magic);
-        ModuleNode::validate_version(&version);
 
-        let mut module = ModuleNode::new().expect("Invalid module");
+        let mut module = ModuleNode::new(magic.try_into().unwrap(), version.try_into().unwrap())
+            .unwrap_or_else(|_| panic!("Invalid module"));
 
         if bytes.len() == 0 {
             return Ok(module);

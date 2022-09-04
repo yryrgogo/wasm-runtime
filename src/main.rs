@@ -1,5 +1,6 @@
 use std::env;
 
+mod buffer;
 mod instruction;
 mod module;
 mod node;
@@ -14,8 +15,11 @@ fn main() {
     let mut bytes = std::fs::read(file_path).expect("file not found");
 
     let parser = parser::Parser::new().unwrap();
-    let module = parser.parse(&mut bytes).expect("Failed to parse");
-    println!("Successfully parse module\n{:#?}", module);
+    let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+    // println!("Successfully parse module\n{:#?}", module);
+
+    module.emit();
+    println!("emit wasm module\n{:#?}", module.buffer);
 }
 
 #[cfg(test)]
@@ -209,5 +213,16 @@ mod parser_tests {
         assert_eq!(code_section_bodies[1].local_count, 0);
         assert_eq!(code_section_bodies[1].function_body_size, 8);
         assert_eq!(code_section_bodies[1].expr.instructions.len(), 4);
+    }
+
+    #[test]
+    fn emit_module() {
+        let file_path = "test/fixtures/increment.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.emit();
+
+        assert_eq!(module.buffer.bytes, [0, 97, 115, 109, 1, 0, 0, 0,]);
     }
 }

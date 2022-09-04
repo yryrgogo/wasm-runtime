@@ -6,6 +6,7 @@ pub struct FunctionTypeNode {
     pub params: ResultTypeNode,
     pub returns: ResultTypeNode,
 }
+
 impl FunctionTypeNode {
     pub fn validate_header(header: u8) {
         const HEADER: u8 = 0x60;
