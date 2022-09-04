@@ -23,7 +23,7 @@ impl Buffer {
         self.write_bytes(bytes);
     }
 
-    pub fn write_s32(&mut self, mut value: i32) {
+    pub fn write_i32(&mut self, mut value: i32) {
         let bytes = encode_i32_to_leb128(value);
         self.write_bytes(bytes);
     }
@@ -126,6 +126,41 @@ mod leb128 {
         (value, size) = Parser::read_u32(&mut buffer.bytes).expect("Invalid u32");
         assert_eq!(value, 65536);
         assert_eq!(size, 3);
+        buffer.clear();
+    }
+
+    #[test]
+    fn test_write_i32() {
+        let mut buffer = Buffer::new();
+        buffer.write_i32(0);
+        assert_eq!(buffer.bytes, vec![0x00]);
+        let mut i_value: i32;
+        let mut size: u32;
+
+        (i_value, size) = Parser::read_i32(&mut buffer.bytes).expect("Invalid u32");
+        assert_eq!(i_value, 0);
+        assert_eq!(size, 1);
+        buffer.clear();
+
+        buffer.write_i32(-1);
+        assert_eq!(buffer.bytes, vec![0x7F]);
+        (i_value, size) = Parser::read_i32(&mut buffer.bytes).expect("Invalid u32");
+        assert_eq!(i_value, -1);
+        assert_eq!(size, 1);
+        buffer.clear();
+
+        buffer.write_i32(-64);
+        assert_eq!(buffer.bytes, vec![0x40]);
+        (i_value, size) = Parser::read_i32(&mut buffer.bytes).expect("Invalid u32");
+        assert_eq!(i_value, -64);
+        assert_eq!(size, 1);
+        buffer.clear();
+
+        buffer.write_i32(-128);
+        assert_eq!(buffer.bytes, vec![0x80, 0x7F]);
+        (i_value, size) = Parser::read_i32(&mut buffer.bytes).expect("Invalid u32");
+        assert_eq!(i_value, -128);
+        assert_eq!(size, 2);
         buffer.clear();
     }
 }

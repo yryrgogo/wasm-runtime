@@ -69,8 +69,8 @@ pub fn encode_i32_to_leb128(mut value: i32) -> Vec<u8> {
     // signed leb128
     let mut result: Vec<u8> = vec![];
     loop {
-        let mut byte = value & 0b01111111;
-        byte >>= 7;
+        let byte = value & 0b01111111;
+        value >>= 7;
 
         if (value == 0 && (byte & 0b01000000) == 0) || (value == -1 && (byte & 0b01000000) != 0) {
             result.push(byte as u8);
