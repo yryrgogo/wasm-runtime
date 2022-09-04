@@ -1,3 +1,5 @@
+use crate::leb128::{encode_i32_to_leb128, encode_u32_to_leb128};
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Buffer {
     pub bytes: Vec<u8>,
@@ -17,20 +19,13 @@ impl Buffer {
     }
 
     pub fn write_u32(&mut self, mut value: u32) {
-        // unsigned leb128
-        value |= 0;
-        let mut result: Vec<u8> = vec![];
-        loop {
-            let byte = value & 0b01111111;
-            value >>= 7;
-            if value == 0 {
-                result.push(byte as u8);
-                break;
-            } else {
-                result.push((byte | 0b10000000) as u8);
-            }
-        }
-        self.write_bytes(result);
+        let bytes = encode_u32_to_leb128(value);
+        self.write_bytes(bytes);
+    }
+
+    pub fn write_s32(&mut self, mut value: i32) {
+        let bytes = encode_i32_to_leb128(value);
+        self.write_bytes(bytes);
     }
 
     pub fn clear(&mut self) {

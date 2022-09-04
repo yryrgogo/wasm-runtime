@@ -2,6 +2,7 @@ use std::env;
 
 mod buffer;
 mod instruction;
+mod leb128;
 mod module;
 mod node;
 mod parser;
