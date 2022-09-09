@@ -32,9 +32,46 @@ impl From<u8> for SectionId {
     }
 }
 
+trait Section {
+    fn id(&self) -> SectionId;
+}
+
+pub trait Node {
+    fn size(&self) -> u32;
+    fn encode(&self) -> Vec<u8>;
+}
+
 #[derive(Debug)]
 pub struct TypeSectionNode {
     pub function_types: Vec<FunctionTypeNode>,
+}
+
+impl Section for TypeSectionNode {
+    fn id(&self) -> SectionId {
+        SectionId::TypeSectionId
+    }
+}
+
+impl Node for TypeSectionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // count of function types
+        for function_type in &self.function_types {
+            size += function_type.size();
+        }
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.push(self.id() as u8);
+        bytes.push(self.size() as u8);
+        bytes.push(self.function_types.len() as u8);
+        for function_type in &self.function_types {
+            bytes.extend(function_type.encode());
+        }
+        bytes
+    }
 }
 
 #[derive(Debug)]

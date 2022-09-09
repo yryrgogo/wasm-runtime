@@ -1,3 +1,5 @@
+use crate::module::section::Node;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum NumberType {
     I32,
@@ -17,6 +19,22 @@ impl From<u8> for NumberType {
             0x7D => F32,
             0x7C => F64,
             _ => unreachable!("Invalid ValueType {:x}", byte),
+        }
+    }
+}
+
+impl Node for NumberType {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        use NumberType::*;
+        match self {
+            I32 => vec![0x7F],
+            I64 => vec![0x7E],
+            F32 => vec![0x7D],
+            F64 => vec![0x7C],
         }
     }
 }

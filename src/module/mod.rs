@@ -4,7 +4,9 @@ use std::error::Error;
 
 use crate::buffer::Buffer;
 
-use self::section::{CodeSectionNode, ExportSectionNode, FunctionSectionNode, TypeSectionNode};
+use self::section::{
+    CodeSectionNode, ExportSectionNode, FunctionSectionNode, Node, TypeSectionNode,
+};
 
 #[derive(Debug)]
 pub struct ModuleNode {
@@ -52,7 +54,7 @@ impl ModuleNode {
         self.buffer.write_bytes(self.version.to_vec());
 
         if let Some(type_section) = &self.type_section {
-            println!("type_section: {:?}", type_section);
+            self.buffer.write_bytes(type_section.encode());
         }
         if let Some(function_section) = &self.function_section {
             println!("function_section: {:?}", function_section);

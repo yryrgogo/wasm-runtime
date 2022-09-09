@@ -57,7 +57,7 @@ impl Parser {
         let mut section_bytes = bytes[0..(size as usize)].to_vec();
         (*bytes).drain(0..(size as usize));
 
-        dbg!("section id: {}", id);
+        dbg!("section id: {}, size: {}", id, size);
 
         match SectionId::from(id) {
             SectionId::CustomSectionId => todo!("Custom section"),
@@ -134,8 +134,9 @@ impl Parser {
             let export_desc = self
                 .export_desc(bytes)
                 .expect("Failed to parse export desc");
+
             exports.push(ExportNode {
-                name: name_bytes,
+                name: String::from_utf8(name_bytes).unwrap(),
                 export_desc,
             });
         }
@@ -464,18 +465,15 @@ impl Parser {
     /// functype = 0x60 (result type) (result type)
     fn function_type(&self, bytes: &mut Vec<u8>) -> Result<FunctionTypeNode, Box<dyn Error>> {
         let header = Parser::read_u8(bytes).expect("Failed to parse function type header");
-        FunctionTypeNode::validate_header(header);
-
         let params = self
             .result_types(bytes)
             .expect("Failed to parse value type");
-
-        // returns
         let returns = self
             .result_types(bytes)
             .expect("Failed to parse value type");
 
-        let function_type_node: FunctionTypeNode = FunctionTypeNode { params, returns };
+        let function_type_node: FunctionTypeNode = FunctionTypeNode::new(params, returns);
+        function_type_node.validate_header(header);
 
         Ok(function_type_node)
     }

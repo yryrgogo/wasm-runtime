@@ -1,18 +1,52 @@
-use crate::types::{BlockType, ValueType};
+use crate::{
+    leb128::encode_u32_to_leb128,
+    module::section::Node,
+    types::{BlockType, ValueType},
+};
 
 // https://webassembly.github.io/spec/core/binary/types.html#function-types
 #[derive(Debug)]
 pub struct FunctionTypeNode {
+    pub header: u8,
     pub params: ResultTypeNode,
     pub returns: ResultTypeNode,
 }
 
 impl FunctionTypeNode {
-    pub fn validate_header(header: u8) {
-        const HEADER: u8 = 0x60;
-        if header != HEADER {
+    pub fn new(params: ResultTypeNode, returns: ResultTypeNode) -> Self {
+        Self {
+            header: 0x60,
+            params,
+            returns,
+        }
+    }
+
+    pub fn validate_header(&self, header: u8) {
+        if header != self.header {
             panic!("Invalid TypeSection header {}", header);
         }
+    }
+}
+
+impl Node for FunctionTypeNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // header
+        size += 1; // count of params
+        size += self.params.size();
+        size += 1; // count of params
+        size += self.returns.size();
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.header);
+        buffer.extend(encode_u32_to_leb128(self.params.size()));
+        buffer.extend(self.params.encode());
+        buffer.extend(encode_u32_to_leb128(self.returns.size()));
+        buffer.extend(self.returns.encode());
+        buffer
     }
 }
 
@@ -21,6 +55,26 @@ impl FunctionTypeNode {
 pub struct ResultTypeNode {
     // TODO: replace to Value Types
     pub val_types: Vec<ValueType>,
+}
+
+impl Node for ResultTypeNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += self.val_types.len();
+        size as u32
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        for val_type in self.val_types.iter() {
+            match val_type {
+                ValueType::NumberType(num) => {
+                    buffer.extend(num.encode());
+                }
+            }
+        }
+        buffer
+    }
 }
 
 #[derive(Debug)]
@@ -44,7 +98,7 @@ pub struct ExpressionNode {
 
 #[derive(Debug)]
 pub struct ExportNode {
-    pub name: Vec<u8>,
+    pub name: String,
     pub export_desc: ExportDescNode,
 }
 

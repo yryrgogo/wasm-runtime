@@ -28,6 +28,17 @@ impl Buffer {
         self.write_bytes(bytes);
     }
 
+    pub fn write_string(&mut self, value: String) {
+        let bytes = value.into_bytes();
+        self.write_u32(bytes.len() as u32);
+        self.write_bytes(bytes);
+    }
+
+    pub fn write_vector(&mut self, value: Vec<u8>) {
+        self.write_u32(value.len() as u32);
+        self.write_bytes(value);
+    }
+
     pub fn clear(&mut self) {
         self.bytes.clear();
     }

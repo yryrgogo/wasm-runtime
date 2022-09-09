@@ -87,7 +87,7 @@ mod parser_tests {
 
         let export_section_exports = module.export_section.unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(export_section_exports[0].name, [97, 100, 100]);
+        assert_eq!(export_section_exports[0].name, "add");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -117,7 +117,7 @@ mod parser_tests {
 
         let export_section_exports = module.export_section.unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(export_section_exports[0].name, [103, 101, 95, 115, 49, 48]);
+        assert_eq!(export_section_exports[0].name, "ge_s10");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -147,7 +147,7 @@ mod parser_tests {
 
         let export_section_exports = module.export_section.unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(export_section_exports[0].name, [108, 111, 111, 112]);
+        assert_eq!(export_section_exports[0].name, "loop");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -194,10 +194,7 @@ mod parser_tests {
 
         let export_section_exports = module.export_section.unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(
-            export_section_exports[0].name,
-            [105, 110, 99, 114, 101, 109, 101, 110, 116]
-        );
+        assert_eq!(export_section_exports[0].name, "increment");
         assert_eq!(export_section_exports[0].export_desc.index, 1);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -224,6 +221,9 @@ mod parser_tests {
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
         module.emit();
 
-        assert_eq!(module.buffer.bytes, [0, 97, 115, 109, 1, 0, 0, 0,]);
+        assert_eq!(
+            module.buffer.bytes,
+            [0, 97, 115, 109, 1, 0, 0, 0, 1, 12, 2, 96, 2, 127, 127, 1, 127, 96, 1, 127, 1, 127,]
+        );
     }
 }
