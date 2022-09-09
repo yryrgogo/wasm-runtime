@@ -1,4 +1,4 @@
-use crate::module::section::Node;
+use crate::node::Node;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum NumberType {

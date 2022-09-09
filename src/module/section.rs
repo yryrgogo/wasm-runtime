@@ -1,4 +1,7 @@
-use crate::node::{CodeNode, ExportNode, FunctionTypeNode};
+use crate::{
+    leb128::encode_u32_to_leb128,
+    node::{CodeNode, ExportNode, FunctionTypeNode, Node},
+};
 
 pub enum SectionId {
     CustomSectionId = 0x0,
@@ -34,11 +37,6 @@ impl From<u8> for SectionId {
 
 trait Section {
     fn id(&self) -> SectionId;
-}
-
-pub trait Node {
-    fn size(&self) -> u32;
-    fn encode(&self) -> Vec<u8>;
 }
 
 #[derive(Debug)]
@@ -77,6 +75,32 @@ impl Node for TypeSectionNode {
 #[derive(Debug)]
 pub struct FunctionSectionNode {
     pub type_indexes: Vec<u32>,
+}
+
+impl Section for FunctionSectionNode {
+    fn id(&self) -> SectionId {
+        SectionId::FunctionSectionId
+    }
+}
+
+impl Node for FunctionSectionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // count of type_indexes
+        size += (&self.type_indexes).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.push(self.id() as u8);
+        bytes.push(self.size() as u8);
+        bytes.push(self.type_indexes.len() as u8);
+        for type_index in &self.type_indexes {
+            bytes.extend(encode_u32_to_leb128(*type_index));
+        }
+        bytes
+    }
 }
 
 #[derive(Debug)]

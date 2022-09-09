@@ -2,11 +2,9 @@ pub mod section;
 
 use std::error::Error;
 
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, node::Node};
 
-use self::section::{
-    CodeSectionNode, ExportSectionNode, FunctionSectionNode, Node, TypeSectionNode,
-};
+use self::section::{CodeSectionNode, ExportSectionNode, FunctionSectionNode, TypeSectionNode};
 
 #[derive(Debug)]
 pub struct ModuleNode {
@@ -57,7 +55,7 @@ impl ModuleNode {
             self.buffer.write_bytes(type_section.encode());
         }
         if let Some(function_section) = &self.function_section {
-            println!("function_section: {:?}", function_section);
+            self.buffer.write_bytes(function_section.encode());
         }
         if let Some(export_section) = &self.export_section {
             println!("export_section: {:?}", export_section);

@@ -1,8 +1,12 @@
 use crate::{
     leb128::encode_u32_to_leb128,
-    module::section::Node,
     types::{BlockType, ValueType},
 };
+
+pub trait Node {
+    fn size(&self) -> u32;
+    fn encode(&self) -> Vec<u8>;
+}
 
 // https://webassembly.github.io/spec/core/binary/types.html#function-types
 #[derive(Debug)]
