@@ -108,6 +108,34 @@ pub struct ExportSectionNode {
     pub exports: Vec<ExportNode>,
 }
 
+impl Section for ExportSectionNode {
+    fn id(&self) -> SectionId {
+        SectionId::ExportSectionId
+    }
+}
+
+impl Node for ExportSectionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // count of exports
+        for export in &self.exports {
+            size += export.size();
+        }
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.push(self.id() as u8);
+        bytes.push(self.size() as u8);
+        bytes.push(self.exports.len() as u8);
+        for export in &self.exports {
+            bytes.extend(export.encode());
+        }
+        bytes
+    }
+}
+
 #[derive(Debug)]
 pub struct CodeSectionNode {
     pub bodies: Vec<CodeNode>,

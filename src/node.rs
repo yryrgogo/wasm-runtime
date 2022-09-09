@@ -106,13 +106,48 @@ pub struct ExportNode {
     pub export_desc: ExportDescNode,
 }
 
+impl Node for ExportNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // name size
+        size += self.name.as_bytes().len() as u32;
+        size += self.export_desc.size();
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.extend(encode_u32_to_leb128(self.name.len() as u32));
+        buffer.extend(self.name.as_bytes());
+        buffer.extend(self.export_desc.encode());
+        buffer
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct ExportDescNode {
     pub export_type: ExportType,
     pub index: u32,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl Node for ExportDescNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // export type
+        size += encode_u32_to_leb128(self.index).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        let a = self.export_type.into();
+        buffer.push(a);
+        buffer.extend(encode_u32_to_leb128(self.index));
+        buffer
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ExportType {
     Function = 0x00,
     // Table = 0x01,
@@ -121,13 +156,24 @@ pub enum ExportType {
 }
 
 impl From<u8> for ExportType {
-    fn from(x: u8) -> ExportType {
+    fn from(x: u8) -> Self {
         match x {
             0x00 => ExportType::Function,
             // 0x01 => ExportType::Table,
             // 0x02 => ExportType::Memory,
             // 0x03 => ExportType::Global,
             _ => unreachable!("{} is an invalid value in ExportType", x),
+        }
+    }
+}
+
+impl Into<u8> for ExportType {
+    fn into(self) -> u8 {
+        match self {
+            ExportType::Function => 0x00,
+            // ExportType::Table => 0x01,
+            // ExportType::Memory => 0x02,
+            // ExportType::Global => 0x03,
         }
     }
 }

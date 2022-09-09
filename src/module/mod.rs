@@ -58,7 +58,7 @@ impl ModuleNode {
             self.buffer.write_bytes(function_section.encode());
         }
         if let Some(export_section) = &self.export_section {
-            println!("export_section: {:?}", export_section);
+            self.buffer.write_bytes(export_section.encode());
         }
         if let Some(code_section) = &self.code_section {
             println!("code_section: {:?}", code_section);
