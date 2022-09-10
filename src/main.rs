@@ -215,15 +215,18 @@ mod parser_tests {
 
     #[test]
     fn emit_module() {
-        let file_paths = ["test/fixtures/increment.wasm"];
-        for file_path in file_paths.iter() {
-            let mut bytes = std::fs::read(file_path).expect("file not found");
-            let original_bytes = bytes.clone();
-            let parser = parser::Parser::new().unwrap();
-            let mut module = parser.parse(&mut bytes).expect("Failed to parse");
-            module.emit();
+        let dir = "test/fixtures";
+        for file in std::fs::read_dir(dir).unwrap() {
+            let file_path = file.unwrap().path().to_str().unwrap().to_string();
+            if (&file_path).ends_with(".wasm") {
+                let mut bytes = std::fs::read(&file_path).expect("file not found");
+                let original_bytes = bytes.clone();
+                let parser = parser::Parser::new().unwrap();
+                let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+                module.emit();
 
-            assert_eq!(module.buffer.bytes, original_bytes);
+                assert_eq!(module.buffer.bytes, original_bytes);
+            }
         }
     }
 }
