@@ -240,20 +240,16 @@ impl Parser {
             Instruction::Block => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
                 let expr = self.expression(bytes).expect("Failed to parse expression");
-                Ok(InstructionNode::Block(BlockInstructionNode {
-                    opcode,
-                    block_type,
-                    expr,
-                }))
+                Ok(InstructionNode::Block(BlockInstructionNode::new(
+                    block_type, expr,
+                )))
             }
             Instruction::Loop => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
                 let expr = self.expression(bytes).expect("Failed to parse expression");
-                Ok(InstructionNode::Loop(LoopInstructionNode {
-                    opcode,
-                    block_type,
-                    expr,
-                }))
+                Ok(InstructionNode::Loop(LoopInstructionNode::new(
+                    block_type, expr,
+                )))
             }
             Instruction::If => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
@@ -266,59 +262,50 @@ impl Parser {
                         let else_expr = self
                             .expression(bytes)
                             .expect("Failed to parse if-else expression");
-                        Ok(InstructionNode::If(IfInstructionNode {
+                        Ok(InstructionNode::If(IfInstructionNode::new(
                             block_type,
                             then_expr,
-                            else_expr: Some(else_expr),
-                            opcode,
-                        }))
+                            Some(else_expr),
+                        )))
                     }
-                    _ => Ok(InstructionNode::If(IfInstructionNode {
-                        block_type,
-                        then_expr,
-                        else_expr: None,
-                        opcode,
-                    })),
+                    _ => Ok(InstructionNode::If(IfInstructionNode::new(
+                        block_type, then_expr, None,
+                    ))),
                 }
             }
             Instruction::Else => {
-                let else_instr = ElseInstructionNode { opcode };
+                let else_instr = ElseInstructionNode::default();
                 Ok(InstructionNode::Else(else_instr))
             }
-            Instruction::End => Ok(InstructionNode::End(EndInstructionNode { opcode })),
+            Instruction::End => Ok(InstructionNode::End(EndInstructionNode::default())),
             Instruction::Br => {
                 let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br depth");
-                Ok(InstructionNode::Br(BrInstructionNode { opcode, depth }))
+                Ok(InstructionNode::Br(BrInstructionNode::new(depth)))
             }
             Instruction::BrIf => {
                 let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br if depth");
-                Ok(InstructionNode::BrIf(BrIfInstructionNode { opcode, depth }))
+                Ok(InstructionNode::BrIf(BrIfInstructionNode::new(depth)))
             }
             Instruction::BrTable => todo!(),
             Instruction::Return => todo!(),
             Instruction::Call => {
                 let (index, _) = Parser::read_u32(bytes).expect("Failed to parse call index");
-                Ok(InstructionNode::Call(CallInstructionNode {
-                    opcode,
-                    function_index: index,
-                }))
+                Ok(InstructionNode::Call(CallInstructionNode::new(index)))
             }
             Instruction::CallIndirect => todo!(),
             Instruction::Drop => todo!(),
             Instruction::Select => todo!(),
             Instruction::GetLocal => {
                 let (index, _) = Parser::read_u32(bytes).expect("Failed to parse get local index");
-                Ok(InstructionNode::GetLocal(GetLocalInstructionNode {
-                    opcode,
+                Ok(InstructionNode::GetLocal(GetLocalInstructionNode::new(
                     index,
-                }))
+                )))
             }
             Instruction::SetLocal => {
                 let (index, _) = Parser::read_u32(bytes).expect("Failed to parse set local index");
-                Ok(InstructionNode::SetLocal(SetLocalInstructionNode {
-                    opcode,
+                Ok(InstructionNode::SetLocal(SetLocalInstructionNode::new(
                     index,
-                }))
+                )))
             }
             Instruction::TeeLocal => todo!(),
             Instruction::GetGlobal => todo!(),
@@ -350,7 +337,7 @@ impl Parser {
             Instruction::GrowMemory => todo!(),
             Instruction::I32Const => {
                 let (value, _) = Parser::read_i32(bytes).expect("Failed to parse const i32");
-                let node = InstructionNode::I32Const(I32ConstInstructionNode { opcode, value });
+                let node = InstructionNode::I32Const(I32ConstInstructionNode::new(value));
                 Ok(node)
             }
             Instruction::I64Const => todo!(),
@@ -366,7 +353,7 @@ impl Parser {
             Instruction::I32LeS => todo!(),
             Instruction::I32LeU => todo!(),
             Instruction::I32GeS => {
-                let node = InstructionNode::I32GeS(I32GeSInstructionNode { opcode });
+                let node = InstructionNode::I32GeS(I32GeSInstructionNode::default());
                 Ok(node)
             }
             Instruction::I32GeU => todo!(),
@@ -397,11 +384,11 @@ impl Parser {
             Instruction::I32Ctz => todo!(),
             Instruction::I32Popcnt => todo!(),
             Instruction::I32Add => {
-                let node = InstructionNode::I32Add(I32AddInstructionNode {});
+                let node = InstructionNode::I32Add(I32AddInstructionNode::default());
                 Ok(node)
             }
             Instruction::I32Sub => {
-                let node = InstructionNode::I32Sub(I32SubInstructionNode {});
+                let node = InstructionNode::I32Sub(I32SubInstructionNode::default());
                 Ok(node)
             }
             Instruction::I32Mul => todo!(),

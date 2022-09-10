@@ -259,7 +259,7 @@ mod module_node_convert_tests {
 
         for code in code_section.bodies.iter_mut() {
             code.expr
-                .update_instruction(2, InstructionNode::I32Sub(I32SubInstructionNode {}));
+                .update_instruction(2, InstructionNode::I32Sub(I32SubInstructionNode::default()));
         }
         module.set_code_section(code_section);
 

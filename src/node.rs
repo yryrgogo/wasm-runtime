@@ -140,6 +140,14 @@ pub struct ExpressionNode {
     pub instructions: Vec<InstructionNode>,
 }
 
+impl Default for ExpressionNode {
+    fn default() -> Self {
+        Self {
+            instructions: vec![],
+        }
+    }
+}
+
 impl Node for ExpressionNode {
     fn size(&self) -> u32 {
         let mut size = 0;
@@ -370,8 +378,17 @@ impl Node for InstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32ConstInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub value: i32,
+}
+
+impl I32ConstInstructionNode {
+    pub fn new(value: i32) -> Self {
+        Self {
+            opcode: 0x41,
+            value,
+        }
+    }
 }
 
 impl Node for I32ConstInstructionNode {
@@ -392,7 +409,7 @@ impl Node for I32ConstInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EndInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
 }
 
 impl Node for EndInstructionNode {
@@ -405,10 +422,25 @@ impl Node for EndInstructionNode {
     }
 }
 
+impl Default for EndInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x0b }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct GetLocalInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub index: u32,
+}
+
+impl GetLocalInstructionNode {
+    pub fn new(index: u32) -> Self {
+        Self {
+            opcode: 0x20,
+            index,
+        }
+    }
 }
 
 impl Node for GetLocalInstructionNode {
@@ -429,8 +461,17 @@ impl Node for GetLocalInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct SetLocalInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub index: u32,
+}
+
+impl SetLocalInstructionNode {
+    pub fn new(index: u32) -> Self {
+        Self {
+            opcode: 0x21,
+            index,
+        }
+    }
 }
 
 impl Node for SetLocalInstructionNode {
@@ -450,7 +491,15 @@ impl Node for SetLocalInstructionNode {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct I32AddInstructionNode {}
+pub struct I32AddInstructionNode {
+    opcode: u8,
+}
+
+impl Default for I32AddInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x6a }
+    }
+}
 
 impl Node for I32AddInstructionNode {
     fn size(&self) -> u32 {
@@ -458,18 +507,20 @@ impl Node for I32AddInstructionNode {
     }
 
     fn encode(&self) -> Vec<u8> {
-        vec![self.opcode()]
-    }
-}
-
-impl I32AddInstructionNode {
-    pub fn opcode(&self) -> u8 {
-        0x6a
+        vec![self.opcode]
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct I32SubInstructionNode {}
+pub struct I32SubInstructionNode {
+    opcode: u8,
+}
+
+impl Default for I32SubInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x6b }
+    }
+}
 
 impl Node for I32SubInstructionNode {
     fn size(&self) -> u32 {
@@ -477,19 +528,19 @@ impl Node for I32SubInstructionNode {
     }
 
     fn encode(&self) -> Vec<u8> {
-        vec![self.opcode()]
-    }
-}
-
-impl I32SubInstructionNode {
-    pub fn opcode(&self) -> u8 {
-        0x6b
+        vec![self.opcode]
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct I64AddInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I64AddInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x7c }
+    }
 }
 
 impl Node for I64AddInstructionNode {
@@ -504,7 +555,13 @@ impl Node for I64AddInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I64SubInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I64SubInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x7d }
+    }
 }
 
 impl Node for I64SubInstructionNode {
@@ -519,7 +576,13 @@ impl Node for I64SubInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32RemUInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32RemUInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x70 }
+    }
 }
 
 impl Node for I32RemUInstructionNode {
@@ -534,7 +597,13 @@ impl Node for I32RemUInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32ShlInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32ShlInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x74 }
+    }
 }
 
 impl Node for I32ShlInstructionNode {
@@ -549,7 +618,13 @@ impl Node for I32ShlInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32EqzInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32EqzInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x45 }
+    }
 }
 
 impl Node for I32EqzInstructionNode {
@@ -564,7 +639,13 @@ impl Node for I32EqzInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32EqInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32EqInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x46 }
+    }
 }
 
 impl Node for I32EqInstructionNode {
@@ -579,7 +660,13 @@ impl Node for I32EqInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32LtSInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32LtSInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x48 }
+    }
 }
 
 impl Node for I32LtSInstructionNode {
@@ -594,7 +681,13 @@ impl Node for I32LtSInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32LtUInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32LtUInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x49 }
+    }
 }
 
 impl Node for I32LtUInstructionNode {
@@ -609,7 +702,13 @@ impl Node for I32LtUInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32GeSInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32GeSInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x4e }
+    }
 }
 
 impl Node for I32GeSInstructionNode {
@@ -624,7 +723,13 @@ impl Node for I32GeSInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32GeUInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32GeUInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x4f }
+    }
 }
 
 impl Node for I32GeUInstructionNode {
@@ -639,7 +744,13 @@ impl Node for I32GeUInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32GtSInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32GtSInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x55 }
+    }
 }
 
 impl Node for I32GtSInstructionNode {
@@ -654,7 +765,13 @@ impl Node for I32GtSInstructionNode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct I32GtUInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for I32GtUInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x56 }
+    }
 }
 
 impl Node for I32GtUInstructionNode {
@@ -669,10 +786,25 @@ impl Node for I32GtUInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct IfInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub block_type: BlockTypeNode,
     pub then_expr: ExpressionNode,
     pub else_expr: Option<ExpressionNode>,
+}
+
+impl IfInstructionNode {
+    pub fn new(
+        block_type: BlockTypeNode,
+        then_expr: ExpressionNode,
+        else_expr: Option<ExpressionNode>,
+    ) -> Self {
+        Self {
+            opcode: 0x04,
+            block_type,
+            then_expr,
+            else_expr,
+        }
+    }
 }
 
 impl Node for IfInstructionNode {
@@ -701,7 +833,13 @@ impl Node for IfInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct ElseInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
+}
+
+impl Default for ElseInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x05 }
+    }
 }
 
 impl Node for ElseInstructionNode {
@@ -716,9 +854,19 @@ impl Node for ElseInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct BlockInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub block_type: BlockTypeNode,
     pub expr: ExpressionNode,
+}
+
+impl BlockInstructionNode {
+    pub fn new(block_type: BlockTypeNode, expr: ExpressionNode) -> Self {
+        Self {
+            opcode: 0x02,
+            block_type,
+            expr,
+        }
+    }
 }
 
 impl Node for BlockInstructionNode {
@@ -741,9 +889,19 @@ impl Node for BlockInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct LoopInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub block_type: BlockTypeNode,
     pub expr: ExpressionNode,
+}
+
+impl LoopInstructionNode {
+    pub fn new(block_type: BlockTypeNode, expr: ExpressionNode) -> Self {
+        Self {
+            opcode: 0x03,
+            block_type,
+            expr,
+        }
+    }
 }
 
 impl Node for LoopInstructionNode {
@@ -766,8 +924,17 @@ impl Node for LoopInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct BrInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub depth: u32,
+}
+
+impl BrInstructionNode {
+    pub fn new(depth: u32) -> Self {
+        Self {
+            opcode: 0x0c,
+            depth,
+        }
+    }
 }
 
 impl Node for BrInstructionNode {
@@ -788,8 +955,17 @@ impl Node for BrInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct BrIfInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub depth: u32,
+}
+
+impl BrIfInstructionNode {
+    pub fn new(depth: u32) -> Self {
+        Self {
+            opcode: 0x0d,
+            depth,
+        }
+    }
 }
 
 impl Node for BrIfInstructionNode {
@@ -810,8 +986,17 @@ impl Node for BrIfInstructionNode {
 
 #[derive(Debug, Clone)]
 pub struct CallInstructionNode {
-    pub opcode: u8,
+    opcode: u8,
     pub function_index: u32,
+}
+
+impl CallInstructionNode {
+    pub fn new(function_index: u32) -> Self {
+        Self {
+            opcode: 0x10,
+            function_index,
+        }
+    }
 }
 
 impl Node for CallInstructionNode {
