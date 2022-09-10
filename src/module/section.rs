@@ -39,7 +39,7 @@ trait Section {
     fn id(&self) -> SectionId;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypeSectionNode {
     pub function_types: Vec<FunctionTypeNode>,
 }
@@ -72,7 +72,7 @@ impl Node for TypeSectionNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionSectionNode {
     pub type_indexes: Vec<u32>,
 }
@@ -103,7 +103,7 @@ impl Node for FunctionSectionNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExportSectionNode {
     pub exports: Vec<ExportNode>,
 }
@@ -136,7 +136,15 @@ impl Node for ExportSectionNode {
     }
 }
 
-#[derive(Debug)]
+impl ExportSectionNode {
+    pub fn update_export_function_name(&mut self, index: usize, name: String) {
+        if let Some(export) = self.exports.get_mut(index) {
+            export.name = name;
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct CodeSectionNode {
     pub bodies: Vec<CodeNode>,
 }

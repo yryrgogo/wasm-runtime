@@ -12,9 +12,9 @@ use crate::{
         BlockInstructionNode, BrIfInstructionNode, BrInstructionNode, CallInstructionNode,
         CodeNode, ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode,
         ExportTypeNode, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
-        I32AddInstructionNode, I32ConstInstructionNode, I32GeSInstructionNode, IfInstructionNode,
-        InstructionNode, LocalEntryNode, LoopInstructionNode, ResultTypeNode,
-        SetLocalInstructionNode,
+        I32AddInstructionNode, I32ConstInstructionNode, I32GeSInstructionNode,
+        I32SubInstructionNode, IfInstructionNode, InstructionNode, LocalEntryNode,
+        LoopInstructionNode, ResultTypeNode, SetLocalInstructionNode,
     },
     types::{BlockTypeNode, ValueTypeNode},
 };
@@ -397,10 +397,13 @@ impl Parser {
             Instruction::I32Ctz => todo!(),
             Instruction::I32Popcnt => todo!(),
             Instruction::I32Add => {
-                let node = InstructionNode::I32Add(I32AddInstructionNode { opcode });
+                let node = InstructionNode::I32Add(I32AddInstructionNode {});
                 Ok(node)
             }
-            Instruction::I32Sub => todo!(),
+            Instruction::I32Sub => {
+                let node = InstructionNode::I32Sub(I32SubInstructionNode {});
+                Ok(node)
+            }
             Instruction::I32Mul => todo!(),
             Instruction::I32DivS => todo!(),
             Instruction::I32DivU => todo!(),

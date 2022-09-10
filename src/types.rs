@@ -1,6 +1,6 @@
 use crate::node::Node;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum NumberTypeNode {
     I32,
     I64,
@@ -85,7 +85,7 @@ impl From<u8> for ReferenceTypeNode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ValueTypeNode {
     NumberType(NumberTypeNode),
     // VectorType(VectorType),
@@ -133,7 +133,7 @@ impl Node for ValueTypeNode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum BlockTypeNode {
     Empty,
     ValType(ValueTypeNode),

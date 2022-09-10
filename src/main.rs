@@ -233,15 +233,38 @@ mod parser_tests {
 
 #[cfg(test)]
 mod module_node_convert_tests {
-    use crate::parser;
+    use crate::{
+        node::{I32SubInstructionNode, InstructionNode},
+        parser,
+    };
 
     #[test]
     fn convert_add_instruction_to_sub() {
         let mut bytes = std::fs::read("test/fixtures/i32_add.wasm").expect("file not found");
-        let original_bytes = bytes.clone();
+        let sub_bytes = std::fs::read("test/fixtures/i32_sub.wasm").expect("file not found");
         let parser = parser::Parser::new().unwrap();
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        // module.export_section;
+        let mut export_section = module
+            .export_section()
+            .unwrap_or_else(|| panic!("Expected export section"))
+            .clone();
+        export_section.update_export_function_name(0, "sub".to_string());
+        module.set_export_section(export_section);
+
+        let mut code_section = module
+            .code_section()
+            .unwrap_or_else(|| panic!("Expected code section"))
+            .clone();
+
+        for code in code_section.bodies.iter_mut() {
+            code.expr
+                .update_instruction(2, InstructionNode::I32Sub(I32SubInstructionNode {}));
+        }
+        module.set_code_section(code_section);
+
+        module.emit();
+
+        assert_eq!(module.buffer.bytes, sub_bytes);
     }
 }
