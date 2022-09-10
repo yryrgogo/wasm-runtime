@@ -25,7 +25,7 @@ fn main() {
 
 #[cfg(test)]
 mod parser_tests {
-    use crate::node::ExportType;
+    use crate::node::ExportTypeNode;
 
     use super::*;
 
@@ -91,7 +91,7 @@ mod parser_tests {
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
-            ExportType::Function
+            ExportTypeNode::Function
         );
 
         let code_section_bodies = module.code_section.unwrap().bodies;
@@ -121,7 +121,7 @@ mod parser_tests {
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
-            ExportType::Function
+            ExportTypeNode::Function
         );
 
         let code_section_bodies = module.code_section.unwrap().bodies;
@@ -151,7 +151,7 @@ mod parser_tests {
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
-            ExportType::Function
+            ExportTypeNode::Function
         );
 
         let code_section_bodies = module.code_section.unwrap().bodies;
@@ -161,11 +161,11 @@ mod parser_tests {
         assert_eq!(code_section_bodies[0].function_body_size, 43);
         match &code_section_bodies[0].expr.instructions[4] {
             node::InstructionNode::Block(block_node) => {
-                assert_eq!(block_node.block_type, types::BlockType::Empty);
+                assert_eq!(block_node.block_type, types::BlockTypeNode::Empty);
                 assert_eq!(block_node.expr.instructions.len(), 2);
                 match &block_node.expr.instructions[0] {
                     node::InstructionNode::Loop(loop_node) => {
-                        assert_eq!(loop_node.block_type, types::BlockType::Empty);
+                        assert_eq!(loop_node.block_type, types::BlockTypeNode::Empty);
                         assert_eq!(loop_node.expr.instructions.len(), 14);
                     }
                     _ => panic!("Expected loop node"),
@@ -198,7 +198,7 @@ mod parser_tests {
         assert_eq!(export_section_exports[0].export_desc.index, 1);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
-            ExportType::Function
+            ExportTypeNode::Function
         );
 
         let code_section_bodies = module.code_section.unwrap().bodies;
@@ -215,18 +215,15 @@ mod parser_tests {
 
     #[test]
     fn emit_module() {
-        let file_path = "test/fixtures/increment.wasm";
-        let mut bytes = std::fs::read(file_path).expect("file not found");
-        let parser = parser::Parser::new().unwrap();
-        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
-        module.emit();
+        let file_paths = ["test/fixtures/increment.wasm"];
+        for file_path in file_paths.iter() {
+            let mut bytes = std::fs::read(file_path).expect("file not found");
+            let original_bytes = bytes.clone();
+            let parser = parser::Parser::new().unwrap();
+            let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+            module.emit();
 
-        assert_eq!(
-            module.buffer.bytes,
-            [
-                0, 97, 115, 109, 1, 0, 0, 0, 1, 12, 2, 96, 2, 127, 127, 1, 127, 96, 1, 127, 1, 127,
-                3, 3, 2, 0, 1, 7, 13, 1, 9, 105, 110, 99, 114, 101, 109, 101, 110, 116, 0, 1
-            ]
-        );
+            assert_eq!(module.buffer.bytes, original_bytes);
+        }
     }
 }

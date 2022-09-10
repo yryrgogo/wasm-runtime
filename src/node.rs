@@ -1,6 +1,6 @@
 use crate::{
-    leb128::encode_u32_to_leb128,
-    types::{BlockType, ValueType},
+    leb128::{encode_i32_to_leb128, encode_u32_to_leb128},
+    types::{BlockTypeNode, ValueTypeNode},
 };
 
 pub trait Node {
@@ -58,7 +58,7 @@ impl Node for FunctionTypeNode {
 #[derive(Debug)]
 pub struct ResultTypeNode {
     // TODO: replace to Value Types
-    pub val_types: Vec<ValueType>,
+    pub val_types: Vec<ValueTypeNode>,
 }
 
 impl Node for ResultTypeNode {
@@ -72,7 +72,7 @@ impl Node for ResultTypeNode {
         let mut buffer = vec![];
         for val_type in self.val_types.iter() {
             match val_type {
-                ValueType::NumberType(num) => {
+                ValueTypeNode::NumberType(num) => {
                     buffer.extend(num.encode());
                 }
             }
@@ -89,15 +89,73 @@ pub struct CodeNode {
     pub expr: ExpressionNode,
 }
 
+impl Node for CodeNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += encode_u32_to_leb128(self.function_body_size).len() as u32; // function body size
+        size += encode_u32_to_leb128(self.local_count).len() as u32; // local entry count
+        for local in self.locals.iter() {
+            size += local.size();
+        }
+        size += self.expr.size();
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.extend(encode_u32_to_leb128(self.function_body_size));
+        buffer.extend(encode_u32_to_leb128(self.local_count));
+        for local in self.locals.iter() {
+            buffer.extend(local.encode());
+        }
+        buffer.extend(self.expr.encode());
+        buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct LocalEntryNode {
     pub count: u32,
-    pub val_type: ValueType,
+    pub val_type: ValueTypeNode,
+}
+
+impl Node for LocalEntryNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += encode_u32_to_leb128(self.count).len() as u32; // count
+        size += self.val_type.size(); // val_type
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.extend(encode_u32_to_leb128(self.count));
+        buffer.extend(self.val_type.encode());
+        buffer
+    }
 }
 
 #[derive(Debug)]
 pub struct ExpressionNode {
     pub instructions: Vec<InstructionNode>,
+}
+
+impl Node for ExpressionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        for instruction in self.instructions.iter() {
+            size += instruction.size();
+        }
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        for instruction in self.instructions.iter() {
+            buffer.extend(instruction.encode());
+        }
+        buffer
+    }
 }
 
 #[derive(Debug)]
@@ -126,7 +184,7 @@ impl Node for ExportNode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ExportDescNode {
-    pub export_type: ExportType,
+    pub export_type: ExportTypeNode,
     pub index: u32,
 }
 
@@ -140,25 +198,24 @@ impl Node for ExportDescNode {
 
     fn encode(&self) -> Vec<u8> {
         let mut buffer = vec![];
-        let a = self.export_type.into();
-        buffer.push(a);
+        buffer.extend(self.export_type.encode());
         buffer.extend(encode_u32_to_leb128(self.index));
         buffer
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum ExportType {
+pub enum ExportTypeNode {
     Function = 0x00,
     // Table = 0x01,
     // Memory = 0x02,
     // Global = 0x03,
 }
 
-impl From<u8> for ExportType {
+impl From<u8> for ExportTypeNode {
     fn from(x: u8) -> Self {
         match x {
-            0x00 => ExportType::Function,
+            0x00 => ExportTypeNode::Function,
             // 0x01 => ExportType::Table,
             // 0x02 => ExportType::Memory,
             // 0x03 => ExportType::Global,
@@ -167,14 +224,24 @@ impl From<u8> for ExportType {
     }
 }
 
-impl Into<u8> for ExportType {
+impl Into<u8> for ExportTypeNode {
     fn into(self) -> u8 {
         match self {
-            ExportType::Function => 0x00,
+            ExportTypeNode::Function => 0x00,
             // ExportType::Table => 0x01,
             // ExportType::Memory => 0x02,
             // ExportType::Global => 0x03,
         }
+    }
+}
+
+impl Node for ExportTypeNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![(*self).into()]
     }
 }
 
@@ -215,20 +282,119 @@ pub enum InstructionNode {
     // Return,
 }
 
+impl Node for InstructionNode {
+    fn size(&self) -> u32 {
+        match self {
+            InstructionNode::Block(x) => x.size(),
+            InstructionNode::Loop(x) => x.size(),
+            InstructionNode::If(x) => x.size(),
+            InstructionNode::Else(x) => x.size(),
+            InstructionNode::Br(x) => x.size(),
+            InstructionNode::BrIf(x) => x.size(),
+            InstructionNode::Call(x) => x.size(),
+            InstructionNode::End(x) => x.size(),
+            InstructionNode::I32Const(x) => x.size(),
+            InstructionNode::GetLocal(x) => x.size(),
+            InstructionNode::SetLocal(x) => x.size(),
+            InstructionNode::I32Add(x) => x.size(),
+            // InstructionNode::I32Sub(x) => x.size(),
+            // InstructionNode::I32RemU(x) => x.size(),
+            // InstructionNode::I32Shl(x) => x.size(),
+            // InstructionNode::I32Eqz(x) => x.size(),
+            // InstructionNode::I32Eq(x) => x.size(),
+            // InstructionNode::I32LtS(x) => x.size(),
+            // InstructionNode::I32LtU(x) => x.size(),
+            InstructionNode::I32GeS(x) => x.size(),
+            // InstructionNode::I32GeU(x) => x.size(),
+            // InstructionNode::I32GtS(x) => x.size(),
+            // InstructionNode::I32GtU(x) => x.size(),
+            // InstructionNode::I64Add(x) => x.size(),
+            // InstructionNode::I64Sub(x) => x.size(),
+            // InstructionNode::Unreachable => 1,
+            // InstructionNode::Nop => 1,
+            // InstructionNode::BrTable(x, y) => 1 + encode_u32_to_leb128(x.len() as u32).len() as u32 + (x.len() as u32 * 4) + 4,
+            // InstructionNode::Return => 1,
+        }
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        match self {
+            InstructionNode::Block(x) => x.encode(),
+            InstructionNode::Loop(x) => x.encode(),
+            InstructionNode::If(x) => x.encode(),
+            InstructionNode::Else(x) => x.encode(),
+            InstructionNode::Br(x) => x.encode(),
+            InstructionNode::BrIf(x) => x.encode(),
+            InstructionNode::Call(x) => x.encode(),
+            InstructionNode::End(x) => x.encode(),
+            InstructionNode::I32Const(x) => x.encode(),
+            InstructionNode::GetLocal(x) => x.encode(),
+            InstructionNode::SetLocal(x) => x.encode(),
+            InstructionNode::I32Add(x) => x.encode(),
+            // InstructionNode::I32Sub(x) => x.encode(),
+            // InstructionNode::I32RemU(x) => x.encode(),
+            // InstructionNode::I32Shl(x) => x.encode(),
+            // InstructionNode::I32Eqz(x) => x.encode(),
+            // InstructionNode::I32Eq(x) => x.encode(),
+            // InstructionNode::I32LtS(x) => x.encode(),
+            // InstructionNode::I32LtU(x) => x.encode(),
+            InstructionNode::I32GeS(x) => x.encode(),
+            // InstructionNode::I32GeU(x) => x.encode(),
+            // InstructionNode::I32GtS(x) => x.encode(),
+            // InstructionNode::I32GtU(x) => x.encode(),
+            // InstructionNode::I64Add(x) => x.encode(),
+            // InstructionNode::I64Sub(x) => x.encode(),
+            // InstructionNode::Unreachable => vec![0x00],
+            // InstructionNode::Nop => vec![0x01],
+            // InstructionNode::BrTable(x, y) => {
+            //     let mut buffer = vec![0x0e];
+            //     buffer.extend(encode_u32_to_leb128(x.len() as u32));
+            //     for i in x {
+            //         buffer.extend(encode_u32_to_leb128(*i));
+            //     }
+            //     buffer.extend(encode_u32_to_leb128(*y));
+            //     buffer
+            // },
+            // InstructionNode::Return => vec![0x0f],
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct I32ConstInstructionNode {
     pub opcode: u8,
     pub value: i32,
 }
 
-#[derive(Debug)]
-pub struct ElseInstructionNode {
-    pub opcode: u8,
+impl Node for I32ConstInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_i32_to_leb128(self.value).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_i32_to_leb128(self.value));
+        buffer
+    }
 }
 
 #[derive(Debug)]
 pub struct EndInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for EndInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -237,19 +403,72 @@ pub struct GetLocalInstructionNode {
     pub index: u32,
 }
 
+impl Node for GetLocalInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_u32_to_leb128(self.index).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_u32_to_leb128(self.index));
+        buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct SetLocalInstructionNode {
     pub opcode: u8,
     pub index: u32,
 }
 
+impl Node for SetLocalInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_u32_to_leb128(self.index).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_u32_to_leb128(self.index));
+        buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct I32AddInstructionNode {
     pub opcode: u8,
 }
+
+impl Node for I32AddInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32SubInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I32SubInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -257,9 +476,29 @@ pub struct I64AddInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I64AddInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I64SubInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I64SubInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -267,9 +506,29 @@ pub struct I32RemUInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32RemUInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32ShlInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I32ShlInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -277,9 +536,29 @@ pub struct I32EqzInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32EqzInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32EqInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I32EqInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -287,9 +566,29 @@ pub struct I32LtSInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32LtSInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32LtUInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I32LtUInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -297,9 +596,29 @@ pub struct I32GeSInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32GeSInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32GeUInstructionNode {
     pub opcode: u8,
+}
+
+impl Node for I32GeUInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
@@ -307,31 +626,126 @@ pub struct I32GtSInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32GtSInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct I32GtUInstructionNode {
     pub opcode: u8,
 }
 
+impl Node for I32GtUInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
 #[derive(Debug)]
 pub struct IfInstructionNode {
     pub opcode: u8,
-    pub block_type: BlockType,
+    pub block_type: BlockTypeNode,
     pub then_expr: ExpressionNode,
     pub else_expr: Option<ExpressionNode>,
+}
+
+impl Node for IfInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += self.block_type.size();
+        size += self.then_expr.size();
+        if let Some(else_expr) = &self.else_expr {
+            size += else_expr.size();
+        }
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(self.block_type.encode());
+        buffer.extend(self.then_expr.encode());
+        if let Some(else_expr) = &self.else_expr {
+            buffer.extend(else_expr.encode());
+        }
+        buffer
+    }
+}
+
+#[derive(Debug)]
+pub struct ElseInstructionNode {
+    pub opcode: u8,
+}
+
+impl Node for ElseInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
 }
 
 #[derive(Debug)]
 pub struct BlockInstructionNode {
     pub opcode: u8,
-    pub block_type: BlockType,
+    pub block_type: BlockTypeNode,
     pub expr: ExpressionNode,
+}
+
+impl Node for BlockInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += self.block_type.size();
+        size += self.expr.size();
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(self.block_type.encode());
+        buffer.extend(self.expr.encode());
+        buffer
+    }
 }
 
 #[derive(Debug)]
 pub struct LoopInstructionNode {
     pub opcode: u8,
-    pub block_type: BlockType,
+    pub block_type: BlockTypeNode,
     pub expr: ExpressionNode,
+}
+
+impl Node for LoopInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += self.block_type.size();
+        size += self.expr.size();
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(self.block_type.encode());
+        buffer.extend(self.expr.encode());
+        buffer
+    }
 }
 
 #[derive(Debug)]
@@ -340,14 +754,62 @@ pub struct BrInstructionNode {
     pub depth: u32,
 }
 
+impl Node for BrInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_u32_to_leb128(self.depth).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_u32_to_leb128(self.depth));
+        buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct BrIfInstructionNode {
     pub opcode: u8,
     pub depth: u32,
 }
 
+impl Node for BrIfInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_u32_to_leb128(self.depth).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_u32_to_leb128(self.depth));
+        buffer
+    }
+}
+
 #[derive(Debug)]
 pub struct CallInstructionNode {
     pub opcode: u8,
     pub function_index: u32,
+}
+
+impl Node for CallInstructionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // opcode
+        size += encode_u32_to_leb128(self.function_index).len() as u32;
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![];
+        buffer.push(self.opcode);
+        buffer.extend(encode_u32_to_leb128(self.function_index));
+        buffer
+    }
 }

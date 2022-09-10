@@ -140,3 +140,31 @@ impl Node for ExportSectionNode {
 pub struct CodeSectionNode {
     pub bodies: Vec<CodeNode>,
 }
+
+impl Section for CodeSectionNode {
+    fn id(&self) -> SectionId {
+        SectionId::CodeSectionId
+    }
+}
+
+impl Node for CodeSectionNode {
+    fn size(&self) -> u32 {
+        let mut size = 0;
+        size += 1; // count of bodies
+        for body in &self.bodies {
+            size += body.size();
+        }
+        size
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.push(self.id() as u8);
+        bytes.push(self.size() as u8);
+        bytes.push(self.bodies.len() as u8);
+        for body in &self.bodies {
+            bytes.extend(body.encode());
+        }
+        bytes
+    }
+}
