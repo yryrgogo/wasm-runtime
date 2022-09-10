@@ -66,28 +66,28 @@ impl Parser {
                 let section = self
                     .type_section(&mut section_bytes)
                     .expect("Failed to parse type section");
-                (*module).type_section = Some(section);
+                module.set_type_section(section);
             }
             SectionId::ImportSectionId => todo!("import section"),
             SectionId::FunctionSectionId => {
                 let section = self
                     .function_section(&mut section_bytes)
                     .expect("Failed to parse function section");
-                (*module).function_section = Some(section);
+                module.set_function_section(section);
             }
             SectionId::GlobalSectionId => todo!("global section"),
             SectionId::ExportSectionId => {
                 let section = self
                     .export_section(&mut section_bytes)
                     .expect("Failed to parse export section");
-                (*module).export_section = Some(section);
+                module.set_export_section(section);
             }
             SectionId::StartSectionId => todo!("start section"),
             SectionId::CodeSectionId => {
                 let section = self
                     .code_section(&mut section_bytes)
                     .expect("Failed to parse code section");
-                (*module).code_section = Some(section);
+                module.set_code_section(section);
             }
             SectionId::ElementSectionId => todo!("element section"),
             SectionId::DataSectionId => todo!("data section"),

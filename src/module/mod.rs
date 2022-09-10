@@ -8,12 +8,12 @@ use self::section::{CodeSectionNode, ExportSectionNode, FunctionSectionNode, Typ
 
 #[derive(Debug)]
 pub struct ModuleNode {
-    pub magic: [u8; 4],
-    pub version: [u8; 4],
-    pub type_section: Option<TypeSectionNode>,
-    pub function_section: Option<FunctionSectionNode>,
-    pub export_section: Option<ExportSectionNode>,
-    pub code_section: Option<CodeSectionNode>,
+    magic: [u8; 4],
+    version: [u8; 4],
+    type_section: Option<TypeSectionNode>,
+    function_section: Option<FunctionSectionNode>,
+    export_section: Option<ExportSectionNode>,
+    code_section: Option<CodeSectionNode>,
     pub buffer: Buffer,
 }
 impl ModuleNode {
@@ -47,6 +47,38 @@ impl ModuleNode {
         }
     }
 
+    pub fn type_section(&self) -> Option<&TypeSectionNode> {
+        self.type_section.as_ref()
+    }
+
+    pub fn set_type_section(&mut self, type_section: TypeSectionNode) {
+        self.type_section = Some(type_section);
+    }
+
+    pub fn function_section(&self) -> Option<&FunctionSectionNode> {
+        self.function_section.as_ref()
+    }
+
+    pub fn set_function_section(&mut self, function_section: FunctionSectionNode) {
+        self.function_section = Some(function_section);
+    }
+
+    pub fn export_section(&self) -> Option<&ExportSectionNode> {
+        self.export_section.as_ref()
+    }
+
+    pub fn set_export_section(&mut self, export_section: ExportSectionNode) {
+        self.export_section = Some(export_section);
+    }
+
+    pub fn code_section(&self) -> Option<&CodeSectionNode> {
+        self.code_section.as_ref()
+    }
+
+    pub fn set_code_section(&mut self, code_section: CodeSectionNode) {
+        self.code_section = Some(code_section);
+    }
+
     pub fn emit(&mut self) {
         self.buffer.write_bytes(self.magic.to_vec());
         self.buffer.write_bytes(self.version.to_vec());
@@ -63,5 +95,10 @@ impl ModuleNode {
         if let Some(code_section) = &self.code_section {
             self.buffer.write_bytes(code_section.encode());
         }
+    }
+
+    pub fn write_to_file(&self, path: &str) -> Result<(), Box<dyn Error>> {
+        self.buffer.write_to_file(path);
+        Ok(())
     }
 }

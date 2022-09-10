@@ -36,13 +36,13 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types[0].params.val_types.len(), 0);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes.len(), 1);
+        assert_eq!(module.function_section().unwrap().type_indexes.len(), 1);
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 1);
         assert_eq!(code_section_bodies[0].locals.len(), 0);
         assert_eq!(code_section_bodies[0].local_count, 0);
@@ -57,13 +57,13 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types[0].params.val_types.len(), 0);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes.len(), 1);
+        assert_eq!(module.function_section().unwrap().type_indexes.len(), 1);
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 1);
         assert_eq!(code_section_bodies[0].locals.len(), 1);
         assert_eq!(code_section_bodies[0].locals[0].count, 1);
@@ -79,13 +79,13 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types[0].params.val_types.len(), 2);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes.len(), 1);
+        assert_eq!(module.function_section().unwrap().type_indexes.len(), 1);
 
-        let export_section_exports = module.export_section.unwrap().exports;
+        let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
         assert_eq!(export_section_exports[0].name, "add");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
@@ -94,7 +94,7 @@ mod parser_tests {
             ExportTypeNode::Function
         );
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 1);
         assert_eq!(code_section_bodies[0].locals.len(), 0);
         assert_eq!(code_section_bodies[0].local_count, 0);
@@ -109,13 +109,13 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types[0].params.val_types.len(), 1);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes, [0]);
+        assert_eq!(module.function_section().unwrap().type_indexes, [0]);
 
-        let export_section_exports = module.export_section.unwrap().exports;
+        let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
         assert_eq!(export_section_exports[0].name, "ge_s10");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
@@ -124,7 +124,7 @@ mod parser_tests {
             ExportTypeNode::Function
         );
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 1);
         assert_eq!(code_section_bodies[0].locals.len(), 0);
         assert_eq!(code_section_bodies[0].local_count, 0);
@@ -139,13 +139,13 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types[0].params.val_types.len(), 0);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes, [0]);
+        assert_eq!(module.function_section().unwrap().type_indexes, [0]);
 
-        let export_section_exports = module.export_section.unwrap().exports;
+        let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
         assert_eq!(export_section_exports[0].name, "loop");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
@@ -154,7 +154,7 @@ mod parser_tests {
             ExportTypeNode::Function
         );
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 1);
         assert_eq!(code_section_bodies[0].locals.len(), 1);
         assert_eq!(code_section_bodies[0].local_count, 1);
@@ -183,16 +183,16 @@ mod parser_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
 
-        let type_section_function_types = module.type_section.unwrap().function_types;
+        let type_section_function_types = &module.type_section().unwrap().function_types;
         assert_eq!(type_section_function_types.len(), 2);
         assert_eq!(type_section_function_types[0].params.val_types.len(), 2);
         assert_eq!(type_section_function_types[0].returns.val_types.len(), 1);
         assert_eq!(type_section_function_types[1].params.val_types.len(), 1);
         assert_eq!(type_section_function_types[1].returns.val_types.len(), 1);
 
-        assert_eq!(module.function_section.unwrap().type_indexes, [0, 1]);
+        assert_eq!(module.function_section().unwrap().type_indexes, [0, 1]);
 
-        let export_section_exports = module.export_section.unwrap().exports;
+        let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
         assert_eq!(export_section_exports[0].name, "increment");
         assert_eq!(export_section_exports[0].export_desc.index, 1);
@@ -201,7 +201,7 @@ mod parser_tests {
             ExportTypeNode::Function
         );
 
-        let code_section_bodies = module.code_section.unwrap().bodies;
+        let code_section_bodies = &module.code_section().unwrap().bodies;
         assert_eq!(code_section_bodies.len(), 2);
         assert_eq!(code_section_bodies[0].locals.len(), 0);
         assert_eq!(code_section_bodies[0].local_count, 0);
@@ -228,5 +228,20 @@ mod parser_tests {
                 assert_eq!(module.buffer.bytes, original_bytes);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod module_node_convert_tests {
+    use crate::parser;
+
+    #[test]
+    fn convert_add_instruction_to_sub() {
+        let mut bytes = std::fs::read("test/fixtures/i32_add.wasm").expect("file not found");
+        let original_bytes = bytes.clone();
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+
+        // module.export_section;
     }
 }

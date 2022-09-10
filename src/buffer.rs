@@ -39,6 +39,14 @@ impl Buffer {
         self.write_bytes(value);
     }
 
+    pub fn write_to_file(&self, path: &str) {
+        use std::fs::File;
+        use std::io::Write;
+
+        let mut file = File::create(path).unwrap();
+        file.write_all(&self.bytes).unwrap();
+    }
+
     pub fn clear(&mut self) {
         self.bytes.clear();
     }
