@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use crate::{
     module::ModuleNode,
-    node::{CodeNode, ExportTypeNode, FunctionTypeNode, InstructionNode},
+    node::{CodeNode, ExportTypeNode, FunctionNode, FunctionTypeNode, InstructionNode},
     types::ValueType,
 };
 
 #[derive(Debug, Clone)]
 pub struct Instance {
     pub exportMap: HashMap<String, Export>,
-    pub functions: Vec<Function>,
+    pub functions: Vec<FunctionInstance>,
 }
 
 impl Instance {
@@ -23,8 +23,8 @@ impl Instance {
         }
     }
 
-    pub fn instantiate_functions(module: &ModuleNode) -> Vec<Function> {
-        let mut functions: Vec<Function> = vec![];
+    pub fn instantiate_functions(module: &ModuleNode) -> Vec<FunctionInstance> {
+        let mut functions: Vec<FunctionInstance> = vec![];
         let function_types = module
             .type_section()
             .unwrap_or_else(|| {
@@ -32,27 +32,20 @@ impl Instance {
             })
             .function_types
             .clone();
-        let code_section_bodies = module
-            .code_section()
-            .unwrap_or_else(|| {
-                panic!("Module does not have a code section");
-            })
-            .bodies
-            .clone();
-
-        for type_index in module
-            .function_section()
-            .unwrap_or_else(|| {
-                panic!("Module does not have a function section");
-            })
-            .clone()
-            .type_indexes
-        {
-            functions.push(Function::new(
-                &function_types[type_index as usize],
-                &code_section_bodies[type_index as usize],
-                type_index,
-            ));
+        if let Some(funcs) = module.funcs() {
+            for type_index in module
+                .function_section()
+                .unwrap_or_else(|| {
+                    panic!("Module does not have a function section");
+                })
+                .clone()
+                .type_indexes
+            {
+                functions.push(FunctionInstance::new(
+                    &function_types[type_index as usize],
+                    funcs[type_index as usize].clone(),
+                ));
+            }
         }
         functions
     }
@@ -85,30 +78,18 @@ impl Instance {
 }
 
 #[derive(Debug, Clone)]
-pub struct Function {
-    pub type_index: u32,
-    pub locals: Vec<Local>,
-    pub body: Vec<InstructionNode>,
+pub struct FunctionInstance {
+    pub function_type: FunctionTypeNode,
+    pub code: FunctionNode,
 }
 
-impl Function {
-    fn new(function_type: &FunctionTypeNode, code: &CodeNode, type_index: u32) -> Self {
-        let locals = Vec::from_iter(code.locals.iter().map(|local| Local {
-            name: None,
-            val_type: local.val_type,
-        }));
-        Function {
-            locals,
-            body: code.expr.instructions.clone(),
-            type_index,
+impl FunctionInstance {
+    fn new(function_type: &FunctionTypeNode, code: FunctionNode) -> Self {
+        FunctionInstance {
+            function_type: function_type.clone(),
+            code,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Local {
-    name: Option<String>,
-    val_type: ValueType,
 }
 
 #[derive(Debug, Clone)]

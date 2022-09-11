@@ -1,19 +1,19 @@
 use crate::{
-    instance::{Export, Function, Instance},
+    instance::{Export, FunctionInstance, Instance},
     node::InstructionNode,
     stack::{Number, StackEntry, Value},
 };
 
 #[derive(Debug, Clone)]
 struct Frame {
-    function: Function,
+    function: FunctionInstance,
     locals: Vec<Value>,
     base_pointer: usize,
     ip: usize,
 }
 
 impl Frame {
-    fn new(function: Function) -> Self {
+    fn new(function: FunctionInstance) -> Self {
         Self {
             function,
             locals: vec![],
@@ -24,7 +24,7 @@ impl Frame {
 
     fn next_instruction(&mut self) -> &InstructionNode {
         self.ip += 1;
-        &self.function.body[self.ip - 1]
+        &self.function.code.body[self.ip - 1]
     }
 }
 
@@ -50,7 +50,7 @@ impl Default for Runtime {
 }
 
 impl Runtime {
-    fn push_frame(&mut self, function: Function) {
+    fn push_frame(&mut self, function: FunctionInstance) {
         self.frames.push(Frame::new(function));
         self.frame_index += 1;
     }
@@ -91,7 +91,7 @@ impl Runtime {
 
         let mut frame = self.current_frame();
         while !self.frame_is_empty() {
-            while frame.ip < frame.function.body.len() {
+            while frame.ip < frame.function.code.body.len() {
                 let instruction = frame.next_instruction();
                 match instruction {
                     InstructionNode::I32Const(node) => {

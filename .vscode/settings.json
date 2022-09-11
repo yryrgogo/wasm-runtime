@@ -10,6 +10,7 @@
     "arity",
     "bytecode",
     "bytecodes",
+    "funcs",
     "functype",
     "powf",
     "struct",

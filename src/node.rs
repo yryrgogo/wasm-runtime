@@ -54,6 +54,13 @@ impl Node for FunctionTypeNode {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct FunctionNode {
+    pub type_index: u32,
+    pub locals: Vec<ValueType>,
+    pub body: Vec<InstructionNode>,
+}
+
 // https://webassembly.github.io/spec/core/binary/types.html#result-types
 #[derive(Debug, Clone)]
 pub struct ResultTypeNode {

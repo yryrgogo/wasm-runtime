@@ -21,10 +21,11 @@ fn main() {
     let mut bytes = std::fs::read(file_path).expect("file not found");
 
     let parser = parser::Parser::new().unwrap();
-    let module = parser.parse(&mut bytes).expect("Failed to parse");
-    // println!("Successfully parse module\n{:#?}", module);
+    let mut module = parser.parse(&mut bytes).expect("Failed to parse");
 
-    // module.emit();
+    module.emit();
+    module.make();
+    // println!("Successfully parse module\n{:#?}", module);
     // println!("emit wasm module\n{:#?}", module.buffer);
 
     let instance = instance::Instance::new(&module);
@@ -294,7 +295,9 @@ mod vm_tests {
         let file_path = "test/fixtures/const_i32.wasm";
         let mut bytes = std::fs::read(file_path).expect("file not found");
         let parser = parser::Parser::new().unwrap();
-        let module = parser.parse(&mut bytes).expect("Failed to parse");
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
         let instance = instance::Instance::new(&module);
         let mut vm = Runtime::default();
         let keys = instance
