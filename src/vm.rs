@@ -1,14 +1,14 @@
 use crate::{
     instance::{Export, Function, Instance},
     node::InstructionNode,
+    stack::{Number, StackEntry, Value},
 };
 
 #[derive(Debug, Clone)]
 struct Frame {
     function: Function,
     base_pointer: usize,
-    stack: Vec<u64>,
-    sp: usize,
+    ip: usize,
 }
 
 impl Frame {
@@ -16,22 +16,13 @@ impl Frame {
         Self {
             function,
             base_pointer: 0,
-            stack: vec![],
-            sp: 0,
+            ip: 0,
         }
     }
 
     fn next_instruction(&mut self) -> &InstructionNode {
-        self.sp += 1;
-        &self.function.instructions[self.sp - 1]
-    }
-
-    fn push(&mut self, value: u64) {
-        self.stack.push(value);
-    }
-
-    fn pop(&mut self) -> u64 {
-        self.stack.pop().unwrap()
+        self.ip += 1;
+        &self.function.instructions[self.ip - 1]
     }
 }
 
@@ -39,6 +30,8 @@ impl Frame {
 pub struct VM {
     frames: Vec<Frame>,
     frame_index: usize,
+    stack: Vec<StackEntry>,
+    sp: usize,
     depth: usize,
 }
 
@@ -47,6 +40,8 @@ impl Default for VM {
         Self {
             frames: vec![],
             frame_index: 0,
+            stack: vec![],
+            sp: 0,
             depth: 0,
         }
     }
@@ -63,8 +58,39 @@ impl VM {
         self.frames.pop();
     }
 
-    fn current_frame(&mut self) -> &mut Frame {
-        &mut self.frames[self.frame_index]
+    fn current_frame(&mut self) -> Frame {
+        self.frames[self.frame_index].clone()
+    }
+
+    fn stack_push(&mut self, entry: StackEntry) {
+        self.stack.push(entry);
+        // match entry {
+        //     StackEntry::value(value) => {
+        //         match value {
+        //             Value::num(number) => {
+        //                 match number {
+        //                     Number::i32(_) => {
+        //                         self.stack.push(StackEntry::value(Value::num(Number::i32(0))));
+        //                     }
+        //                     Number::i64(_) => {
+        //                         self.stack.push(StackEntry::value(Value::num(Number::i64(0))));
+        //                     }
+        //                     Number::f32(_) => {
+        //                         self.stack.push(StackEntry::value(Value::num(Number::f32(0.0))));
+        //                     }
+        //                     Number::f64(_) => {
+        //                         self.stack.push(StackEntry::value(Value::num(Number::f64(0.0))));
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         self.stack.push(StackEntry::Value(value));
+        //     }
+        // }
+    }
+
+    fn stack_pop(&mut self) -> StackEntry {
+        self.stack.pop().unwrap()
     }
 
     pub fn run(&mut self, instance: &Instance, name: &String) {
@@ -76,76 +102,88 @@ impl VM {
             panic!("cannot run non-function export");
         };
 
-        let frame = self.current_frame();
-        frame;
+        let mut frame = self.current_frame();
 
-        // loop {
-        // let instruction = frame.next_instruction();
-        // match instruction {
-        //     InstructionNode::I32Const(node) => {
-        //         frame.push(node.value);
-        //     }
-        //     InstructionNode::I32Add => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a + b);
-        //     }
-        //     InstructionNode::I32Sub => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a - b);
-        //     }
-        //     InstructionNode::I32Mul => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a * b);
-        //     }
-        //     InstructionNode::I32DivS => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a / b);
-        //     }
-        //     InstructionNode::I32DivU => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a / b);
-        //     }
-        //     InstructionNode::I32RemS => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a % b);
-        //     }
-        //     InstructionNode::I32RemU => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a % b);
-        //     }
-        //     InstructionNode::I32And => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a & b);
-        //     }
-        //     InstructionNode::I32Or => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a | b);
-        //     }
-        //     InstructionNode::I32Xor => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a ^ b);
-        //     }
-        //     InstructionNode::I32Shl => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a << b);
-        //     }
-        //     InstructionNode::I32ShrS => {
-        //         let a = frame.pop_u32();
-        //         let b = frame.pop_u32();
-        //         frame.push_u32(a >> b);
-        //     }
-        // }
-        // }
+        loop {
+            let instruction = frame.next_instruction();
+            match instruction {
+                InstructionNode::I32Const(node) => {
+                    self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
+                }
+                InstructionNode::Block(_) => todo!(),
+                InstructionNode::Loop(_) => todo!(),
+                InstructionNode::If(_) => todo!(),
+                InstructionNode::Else(_) => todo!(),
+                InstructionNode::Br(_) => todo!(),
+                InstructionNode::BrIf(_) => todo!(),
+                InstructionNode::Call(_) => todo!(),
+                InstructionNode::End(_) => todo!(),
+                InstructionNode::GetLocal(_) => todo!(),
+                InstructionNode::SetLocal(_) => todo!(),
+                InstructionNode::I32Add(_) => todo!(),
+                InstructionNode::I32Sub(_) => todo!(),
+                InstructionNode::I32GeS(_) => todo!(),
+                // InstructionNode::I32Add => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a + b);
+                // }
+                // InstructionNode::I32Sub => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a - b);
+                // }
+                // InstructionNode::I32Mul => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a * b);
+                // }
+                // InstructionNode::I32DivS => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a / b);
+                // }
+                // InstructionNode::I32DivU => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a / b);
+                // }
+                // InstructionNode::I32RemS => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a % b);
+                // }
+                // InstructionNode::I32RemU => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a % b);
+                // }
+                // InstructionNode::I32And => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a & b);
+                // }
+                // InstructionNode::I32Or => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a | b);
+                // }
+                // InstructionNode::I32Xor => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a ^ b);
+                // }
+                // InstructionNode::I32Shl => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a << b);
+                // }
+                // InstructionNode::I32ShrS => {
+                //     let a = frame.pop_u32();
+                //     let b = frame.pop_u32();
+                //     frame.push_u32(a >> b);
+                // }
+            }
+        }
     }
 }

@@ -9,6 +9,7 @@ mod leb128;
 mod module;
 mod node;
 mod parser;
+mod stack;
 mod types;
 mod vm;
 
