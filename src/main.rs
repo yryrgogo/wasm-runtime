@@ -1,5 +1,7 @@
 use std::env;
 
+use crate::vm::VM;
+
 mod buffer;
 mod instance;
 mod instruction;
@@ -18,14 +20,21 @@ fn main() {
     let mut bytes = std::fs::read(file_path).expect("file not found");
 
     let parser = parser::Parser::new().unwrap();
-    let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+    let module = parser.parse(&mut bytes).expect("Failed to parse");
     // println!("Successfully parse module\n{:#?}", module);
 
     // module.emit();
     // println!("emit wasm module\n{:#?}", module.buffer);
 
-    let mut instance = instance::Instance::new(&module);
-    println!("wasm module instance\n{:#?}", instance);
+    let instance = instance::Instance::new(&module);
+    let mut vm = VM::default();
+    let keys = instance
+        .exportMap
+        .keys()
+        .map(|k| k.to_string())
+        .collect::<Vec<String>>();
+    vm.run(&instance, &keys[0]);
+    println!("{:#?}", vm);
 }
 
 #[cfg(test)]

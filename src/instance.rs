@@ -8,12 +8,22 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Instance {
-    exports: HashMap<String, Export>,
-    functions: Vec<Function>,
+    pub exportMap: HashMap<String, Export>,
+    pub functions: Vec<Function>,
 }
 
 impl Instance {
     pub fn new(module: &ModuleNode) -> Self {
+        let functions = Instance::instantiate_functions(module);
+        let exportMap = Instance::instantiate_exports(module);
+
+        Instance {
+            exportMap,
+            functions,
+        }
+    }
+
+    pub fn instantiate_functions(module: &ModuleNode) -> Vec<Function> {
         let mut functions: Vec<Function> = vec![];
         let function_types = module
             .type_section()
@@ -43,7 +53,10 @@ impl Instance {
                 &code_section_bodies[type_index as usize],
             ));
         }
+        functions
+    }
 
+    pub fn instantiate_exports(module: &ModuleNode) -> HashMap<String, Export> {
         let mut exports: HashMap<String, Export> = HashMap::new();
         for export in module
             .export_section()
@@ -66,17 +79,16 @@ impl Instance {
                 ExportTypeNode::Global => {}
             }
         }
-
-        Instance { exports, functions }
+        exports
     }
 }
 
 #[derive(Debug, Clone)]
-struct Function {
-    locals: Vec<Local>,
-    body: Vec<InstructionNode>,
-    params: Vec<ValueType>,
-    returns: Vec<ValueType>,
+pub struct Function {
+    pub locals: Vec<Local>,
+    pub instructions: Vec<InstructionNode>,
+    pub params: Vec<ValueType>,
+    pub returns: Vec<ValueType>,
 }
 
 impl Function {
@@ -88,7 +100,7 @@ impl Function {
         let f = function_type.clone();
         Function {
             locals,
-            body: code.expr.instructions.clone(),
+            instructions: code.expr.instructions.clone(),
             params: f.params.val_types,
             returns: f.returns.val_types,
         }
@@ -96,13 +108,13 @@ impl Function {
 }
 
 #[derive(Debug, Clone)]
-struct Local {
+pub struct Local {
     name: Option<String>,
     val_type: ValueType,
 }
 
 #[derive(Debug, Clone)]
-enum Export {
+pub enum Export {
     Function { name: String, index: usize },
     Table { name: String, index: usize },
     Memory { name: String, index: usize },
