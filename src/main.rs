@@ -1,12 +1,14 @@
 use std::env;
 
 mod buffer;
+mod instance;
 mod instruction;
 mod leb128;
 mod module;
 mod node;
 mod parser;
 mod types;
+mod vm;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -19,8 +21,11 @@ fn main() {
     let mut module = parser.parse(&mut bytes).expect("Failed to parse");
     // println!("Successfully parse module\n{:#?}", module);
 
-    module.emit();
-    println!("emit wasm module\n{:#?}", module.buffer);
+    // module.emit();
+    // println!("emit wasm module\n{:#?}", module.buffer);
+
+    let mut instance = instance::Instance::new(&module);
+    println!("wasm module instance\n{:#?}", instance);
 }
 
 #[cfg(test)]
@@ -161,11 +166,11 @@ mod parser_tests {
         assert_eq!(code_section_bodies[0].function_body_size, 43);
         match &code_section_bodies[0].expr.instructions[4] {
             node::InstructionNode::Block(block_node) => {
-                assert_eq!(block_node.block_type, types::BlockTypeNode::Empty);
+                assert_eq!(block_node.block_type, types::BlockType::Empty);
                 assert_eq!(block_node.expr.instructions.len(), 2);
                 match &block_node.expr.instructions[0] {
                     node::InstructionNode::Loop(loop_node) => {
-                        assert_eq!(loop_node.block_type, types::BlockTypeNode::Empty);
+                        assert_eq!(loop_node.block_type, types::BlockType::Empty);
                         assert_eq!(loop_node.expr.instructions.len(), 14);
                     }
                     _ => panic!("Expected loop node"),

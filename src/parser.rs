@@ -1,4 +1,4 @@
-use super::types::NumberTypeNode;
+use super::types::NumberType;
 use crate::{
     instruction::Instruction,
     leb128::{decode_signed_leb128, decode_unsigned_leb128},
@@ -16,7 +16,7 @@ use crate::{
         I32SubInstructionNode, IfInstructionNode, InstructionNode, LocalEntryNode,
         LoopInstructionNode, ResultTypeNode, SetLocalInstructionNode,
     },
-    types::{BlockTypeNode, ValueTypeNode},
+    types::{BlockType, ValueType},
 };
 use std::error::Error;
 
@@ -202,7 +202,7 @@ impl Parser {
 
         Ok(LocalEntryNode {
             count,
-            val_type: ValueTypeNode::NumberType(number_type),
+            val_type: ValueType::Number(number_type),
         })
     }
 
@@ -478,19 +478,19 @@ impl Parser {
             let number_type = self
                 .number_type(bytes)
                 .expect("Failed to parse number type");
-            node.val_types.push(ValueTypeNode::NumberType(number_type));
+            node.val_types.push(ValueType::Number(number_type));
         }
         Ok(node)
     }
 
-    fn number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberTypeNode, Box<dyn Error>> {
+    fn number_type(&self, bytes: &mut Vec<u8>) -> Result<NumberType, Box<dyn Error>> {
         let byte = Parser::read_u8(bytes).expect("Failed to read number type id");
-        Ok(NumberTypeNode::from(byte))
+        Ok(NumberType::from(byte))
     }
 
-    fn block_type(&self, bytes: &mut Vec<u8>) -> Result<BlockTypeNode, Box<dyn Error>> {
+    fn block_type(&self, bytes: &mut Vec<u8>) -> Result<BlockType, Box<dyn Error>> {
         let byte = Parser::read_u8(bytes).expect("Failed to read block type id");
-        let block_type = BlockTypeNode::from(byte);
+        let block_type = BlockType::from(byte);
         Ok(block_type)
     }
 

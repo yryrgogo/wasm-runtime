@@ -1,7 +1,7 @@
 use crate::node::Node;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum NumberTypeNode {
+pub enum NumberType {
     I32,
     I64,
     F32,
@@ -9,9 +9,9 @@ pub enum NumberTypeNode {
 }
 
 // https://doc.rust-lang.org/std/convert/trait.From.html
-impl From<u8> for NumberTypeNode {
+impl From<u8> for NumberType {
     fn from(byte: u8) -> Self {
-        use NumberTypeNode::*;
+        use NumberType::*;
 
         match byte {
             0x7F => I32,
@@ -23,9 +23,9 @@ impl From<u8> for NumberTypeNode {
     }
 }
 
-impl Into<u8> for NumberTypeNode {
+impl Into<u8> for NumberType {
     fn into(self) -> u8 {
-        use NumberTypeNode::*;
+        use NumberType::*;
 
         match self {
             I32 => 0x7F,
@@ -36,13 +36,13 @@ impl Into<u8> for NumberTypeNode {
     }
 }
 
-impl Node for NumberTypeNode {
+impl Node for NumberType {
     fn size(&self) -> u32 {
         1
     }
 
     fn encode(&self) -> Vec<u8> {
-        use NumberTypeNode::*;
+        use NumberType::*;
         match self {
             I32 => vec![0x7F],
             I64 => vec![0x7E],
@@ -86,81 +86,81 @@ impl From<u8> for ReferenceTypeNode {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum ValueTypeNode {
-    NumberType(NumberTypeNode),
-    // VectorType(VectorType),
-    // ReferenceType(ReferenceType),
+pub enum ValueType {
+    Number(NumberType),
+    // Vector(VectorType),
+    // Reference(ReferenceType),
 }
 
-impl From<u8> for ValueTypeNode {
+impl From<u8> for ValueType {
     fn from(byte: u8) -> Self {
-        use ValueTypeNode::*;
+        use ValueType::*;
 
         match byte {
-            0x7F | 0x7E | 0x7D | 0x7C => NumberType(NumberTypeNode::from(byte)),
-            // 0x => VectorType(VectorType::from(byte)),
-            // 0x | 0x6F => ReferenceType(ReferenceType::from(byte)),
+            0x7F | 0x7E | 0x7D | 0x7C => Number(NumberType::from(byte)),
+            // 0x => Vector(VectorType::from(byte)),
+            // 0x | 0x6F => Reference(ReferenceType::from(byte)),
             _ => unreachable!("Invalid ValueType {:x}", byte),
         }
     }
 }
 
-impl Into<u8> for ValueTypeNode {
+impl Into<u8> for ValueType {
     fn into(self) -> u8 {
-        use ValueTypeNode::*;
+        use ValueType::*;
 
         match self {
-            NumberType(number_type) => number_type.into(),
-            // VectorType(vector_type) => vector_type.into(),
-            // ReferenceType(reference_type) => reference_type.into(),
+            Number(number_type) => number_type.into(),
+            // Vector(vector_type) => vector_type.into(),
+            // Reference(reference_type) => reference_type.into(),
         }
     }
 }
 
-impl Node for ValueTypeNode {
+impl Node for ValueType {
     fn size(&self) -> u32 {
         1
     }
 
     fn encode(&self) -> Vec<u8> {
-        use ValueTypeNode::*;
+        use ValueType::*;
 
         match self {
-            NumberType(number_type) => number_type.encode(),
-            // VectorType(vector_type) => vector_type.encode(),
-            // ReferenceType(reference_type) => reference_type.encode(),
+            Number(number_type) => number_type.encode(),
+            // Vector(vector_type) => vector_type.encode(),
+            // Reference(reference_type) => reference_type.encode(),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum BlockTypeNode {
+pub enum BlockType {
     Empty,
-    ValType(ValueTypeNode),
+    ValType(ValueType),
     // S33,
 }
 
-impl From<u8> for BlockTypeNode {
-    fn from(x: u8) -> BlockTypeNode {
+impl From<u8> for BlockType {
+    fn from(x: u8) -> BlockType {
         match x {
-            0x40 => BlockTypeNode::Empty,
-            0x7F => BlockTypeNode::ValType(ValueTypeNode::NumberType(NumberTypeNode::I32)),
-            // 0x7E => BlockType::ValType(ValueType::NumberType(NumberType::I64)),
-            // 0x7D => BlockType::ValType(ValueType::NumberType(NumberType::F32)),
-            // 0x7C => BlockType::ValType(ValueType::NumberType(NumberType::F64)),
+            0x40 => BlockType::Empty,
+            0x7F => BlockType::ValType(ValueType::Number(NumberType::I32)),
+            // 0x7E => BlockType::ValType(ValueType::Number(NumberType::I64)),
+            // 0x7D => BlockType::ValType(ValueType::Number(NumberType::F32)),
+            // 0x7C => BlockType::ValType(ValueType::Number(NumberType::F64)),
             // 0x70 => BlockType::S33,
             _ => unreachable!("{} is an invalid value in BlockType", x),
         }
     }
 }
 
-impl Node for BlockTypeNode {
+impl Node for BlockType {
     fn size(&self) -> u32 {
         1
     }
 
     fn encode(&self) -> Vec<u8> {
-        use BlockTypeNode::*;
+        use BlockType::*;
 
         match self {
             Empty => vec![0x40],

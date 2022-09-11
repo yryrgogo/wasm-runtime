@@ -1,6 +1,6 @@
 use crate::{
     leb128::{encode_i32_to_leb128, encode_u32_to_leb128},
-    types::{BlockTypeNode, ValueTypeNode},
+    types::{BlockType, ValueType},
 };
 
 pub trait Node {
@@ -58,7 +58,7 @@ impl Node for FunctionTypeNode {
 #[derive(Debug, Clone)]
 pub struct ResultTypeNode {
     // TODO: replace to Value Types
-    pub val_types: Vec<ValueTypeNode>,
+    pub val_types: Vec<ValueType>,
 }
 
 impl Node for ResultTypeNode {
@@ -72,7 +72,7 @@ impl Node for ResultTypeNode {
         let mut buffer = vec![];
         for val_type in self.val_types.iter() {
             match val_type {
-                ValueTypeNode::NumberType(num) => {
+                ValueType::Number(num) => {
                     buffer.extend(num.encode());
                 }
             }
@@ -116,7 +116,7 @@ impl Node for CodeNode {
 #[derive(Debug, Clone)]
 pub struct LocalEntryNode {
     pub count: u32,
-    pub val_type: ValueTypeNode,
+    pub val_type: ValueType,
 }
 
 impl Node for LocalEntryNode {
@@ -221,18 +221,18 @@ impl Node for ExportDescNode {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ExportTypeNode {
     Function = 0x00,
-    // Table = 0x01,
-    // Memory = 0x02,
-    // Global = 0x03,
+    Table = 0x01,
+    Memory = 0x02,
+    Global = 0x03,
 }
 
 impl From<u8> for ExportTypeNode {
     fn from(x: u8) -> Self {
         match x {
             0x00 => ExportTypeNode::Function,
-            // 0x01 => ExportType::Table,
-            // 0x02 => ExportType::Memory,
-            // 0x03 => ExportType::Global,
+            0x01 => ExportTypeNode::Table,
+            0x02 => ExportTypeNode::Memory,
+            0x03 => ExportTypeNode::Global,
             _ => unreachable!("{} is an invalid value in ExportType", x),
         }
     }
@@ -242,9 +242,9 @@ impl Into<u8> for ExportTypeNode {
     fn into(self) -> u8 {
         match self {
             ExportTypeNode::Function => 0x00,
-            // ExportType::Table => 0x01,
-            // ExportType::Memory => 0x02,
-            // ExportType::Global => 0x03,
+            ExportTypeNode::Table => 0x01,
+            ExportTypeNode::Memory => 0x02,
+            ExportTypeNode::Global => 0x03,
         }
     }
 }
@@ -787,14 +787,14 @@ impl Node for I32GtUInstructionNode {
 #[derive(Debug, Clone)]
 pub struct IfInstructionNode {
     opcode: u8,
-    pub block_type: BlockTypeNode,
+    pub block_type: BlockType,
     pub then_expr: ExpressionNode,
     pub else_expr: Option<ExpressionNode>,
 }
 
 impl IfInstructionNode {
     pub fn new(
-        block_type: BlockTypeNode,
+        block_type: BlockType,
         then_expr: ExpressionNode,
         else_expr: Option<ExpressionNode>,
     ) -> Self {
@@ -855,12 +855,12 @@ impl Node for ElseInstructionNode {
 #[derive(Debug, Clone)]
 pub struct BlockInstructionNode {
     opcode: u8,
-    pub block_type: BlockTypeNode,
+    pub block_type: BlockType,
     pub expr: ExpressionNode,
 }
 
 impl BlockInstructionNode {
-    pub fn new(block_type: BlockTypeNode, expr: ExpressionNode) -> Self {
+    pub fn new(block_type: BlockType, expr: ExpressionNode) -> Self {
         Self {
             opcode: 0x02,
             block_type,
@@ -890,12 +890,12 @@ impl Node for BlockInstructionNode {
 #[derive(Debug, Clone)]
 pub struct LoopInstructionNode {
     opcode: u8,
-    pub block_type: BlockTypeNode,
+    pub block_type: BlockType,
     pub expr: ExpressionNode,
 }
 
 impl LoopInstructionNode {
-    pub fn new(block_type: BlockTypeNode, expr: ExpressionNode) -> Self {
+    pub fn new(block_type: BlockType, expr: ExpressionNode) -> Self {
         Self {
             opcode: 0x03,
             block_type,
