@@ -34,8 +34,9 @@ fn main() {
         .keys()
         .map(|k| k.to_string())
         .collect::<Vec<String>>();
-    vm.run(&instance, &keys[0]);
+    let result = vm.run(&instance, &keys[0]);
     println!("{:#?}", vm);
+    println!("result: {:#?}", result);
 }
 
 #[cfg(test)]
@@ -281,5 +282,28 @@ mod module_node_convert_tests {
         module.emit();
 
         assert_eq!(module.buffer.bytes, sub_bytes);
+    }
+}
+
+#[cfg(test)]
+mod vm_tests {
+    use crate::{instance, parser, stack::Number, vm::VM};
+
+    #[test]
+    fn run_i32_const() {
+        let file_path = "test/fixtures/const_i32.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let module = parser.parse(&mut bytes).expect("Failed to parse");
+        let instance = instance::Instance::new(&module);
+        let mut vm = VM::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+        let result = vm.run(&instance, &keys[0]);
+
+        assert_eq!(result, Some(Number::i32(42)));
     }
 }

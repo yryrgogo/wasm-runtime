@@ -53,49 +53,34 @@ impl VM {
         self.frame_index += 1;
     }
 
-    fn pop_frame(&mut self) {
+    fn pop_frame(&mut self) -> Frame {
         self.frame_index -= 1;
-        self.frames.pop();
+        self.frames
+            .pop()
+            .unwrap_or_else(|| panic!("No frame to pop"))
     }
 
     fn current_frame(&mut self) -> Frame {
-        self.frames[self.frame_index].clone()
+        self.frames[self.frame_index - 1].clone()
+    }
+
+    fn frame_is_empty(&self) -> bool {
+        self.frame_index == 0
     }
 
     fn stack_push(&mut self, entry: StackEntry) {
         self.stack.push(entry);
-        // match entry {
-        //     StackEntry::value(value) => {
-        //         match value {
-        //             Value::num(number) => {
-        //                 match number {
-        //                     Number::i32(_) => {
-        //                         self.stack.push(StackEntry::value(Value::num(Number::i32(0))));
-        //                     }
-        //                     Number::i64(_) => {
-        //                         self.stack.push(StackEntry::value(Value::num(Number::i64(0))));
-        //                     }
-        //                     Number::f32(_) => {
-        //                         self.stack.push(StackEntry::value(Value::num(Number::f32(0.0))));
-        //                     }
-        //                     Number::f64(_) => {
-        //                         self.stack.push(StackEntry::value(Value::num(Number::f64(0.0))));
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //         self.stack.push(StackEntry::Value(value));
-        //     }
-        // }
+        self.sp += 1;
     }
 
     fn stack_pop(&mut self) -> StackEntry {
+        self.sp -= 1;
         self.stack.pop().unwrap()
     }
 
-    pub fn run(&mut self, instance: &Instance, name: &String) {
+    pub fn run(&mut self, instance: &Instance, name: &String) -> Option<Number> {
         let export = instance.exportMap.get(name).unwrap();
-        if let Export::Function { index, name } = export {
+        if let Export::Function { index, name: _ } = export {
             let function = &instance.functions[*index];
             self.push_frame(function.clone());
         } else {
@@ -103,87 +88,95 @@ impl VM {
         };
 
         let mut frame = self.current_frame();
-
-        loop {
-            let instruction = frame.next_instruction();
-            match instruction {
-                InstructionNode::I32Const(node) => {
-                    self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
+        while !self.frame_is_empty() {
+            while frame.ip < frame.function.instructions.len() {
+                let instruction = frame.next_instruction();
+                match instruction {
+                    InstructionNode::I32Const(node) => {
+                        self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
+                    }
+                    InstructionNode::Block(_) => todo!(),
+                    InstructionNode::Loop(_) => todo!(),
+                    InstructionNode::If(_) => todo!(),
+                    InstructionNode::Else(_) => todo!(),
+                    InstructionNode::Br(_) => todo!(),
+                    InstructionNode::BrIf(_) => todo!(),
+                    InstructionNode::Call(_) => todo!(),
+                    InstructionNode::End(_) => {}
+                    InstructionNode::GetLocal(_) => todo!(),
+                    InstructionNode::SetLocal(_) => todo!(),
+                    InstructionNode::I32Add(_) => todo!(),
+                    InstructionNode::I32Sub(_) => todo!(),
+                    InstructionNode::I32GeS(_) => todo!(),
+                    // InstructionNode::I32Add => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a + b);
+                    // }
+                    // InstructionNode::I32Sub => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a - b);
+                    // }
+                    // InstructionNode::I32Mul => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a * b);
+                    // }
+                    // InstructionNode::I32DivS => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a / b);
+                    // }
+                    // InstructionNode::I32DivU => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a / b);
+                    // }
+                    // InstructionNode::I32RemS => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a % b);
+                    // }
+                    // InstructionNode::I32RemU => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a % b);
+                    // }
+                    // InstructionNode::I32And => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a & b);
+                    // }
+                    // InstructionNode::I32Or => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a | b);
+                    // }
+                    // InstructionNode::I32Xor => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a ^ b);
+                    // }
+                    // InstructionNode::I32Shl => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a << b);
+                    // }
+                    // InstructionNode::I32ShrS => {
+                    //     let a = frame.pop_u32();
+                    //     let b = frame.pop_u32();
+                    //     frame.push_u32(a >> b);
+                    // }
                 }
-                InstructionNode::Block(_) => todo!(),
-                InstructionNode::Loop(_) => todo!(),
-                InstructionNode::If(_) => todo!(),
-                InstructionNode::Else(_) => todo!(),
-                InstructionNode::Br(_) => todo!(),
-                InstructionNode::BrIf(_) => todo!(),
-                InstructionNode::Call(_) => todo!(),
-                InstructionNode::End(_) => todo!(),
-                InstructionNode::GetLocal(_) => todo!(),
-                InstructionNode::SetLocal(_) => todo!(),
-                InstructionNode::I32Add(_) => todo!(),
-                InstructionNode::I32Sub(_) => todo!(),
-                InstructionNode::I32GeS(_) => todo!(),
-                // InstructionNode::I32Add => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a + b);
-                // }
-                // InstructionNode::I32Sub => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a - b);
-                // }
-                // InstructionNode::I32Mul => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a * b);
-                // }
-                // InstructionNode::I32DivS => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a / b);
-                // }
-                // InstructionNode::I32DivU => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a / b);
-                // }
-                // InstructionNode::I32RemS => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a % b);
-                // }
-                // InstructionNode::I32RemU => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a % b);
-                // }
-                // InstructionNode::I32And => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a & b);
-                // }
-                // InstructionNode::I32Or => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a | b);
-                // }
-                // InstructionNode::I32Xor => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a ^ b);
-                // }
-                // InstructionNode::I32Shl => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a << b);
-                // }
-                // InstructionNode::I32ShrS => {
-                //     let a = frame.pop_u32();
-                //     let b = frame.pop_u32();
-                //     frame.push_u32(a >> b);
-                // }
             }
+            self.pop_frame();
+        }
+        let entry = self.stack_pop();
+        match entry {
+            StackEntry::value(value) => match value {
+                Value::num(number) => Some(number),
+            },
         }
     }
 }
