@@ -51,6 +51,7 @@ impl Instance {
             functions.push(Function::new(
                 &function_types[type_index as usize],
                 &code_section_bodies[type_index as usize],
+                type_index,
             ));
         }
         functions
@@ -85,24 +86,21 @@ impl Instance {
 
 #[derive(Debug, Clone)]
 pub struct Function {
+    pub type_index: u32,
     pub locals: Vec<Local>,
-    pub instructions: Vec<InstructionNode>,
-    pub params: Vec<ValueType>,
-    pub returns: Vec<ValueType>,
+    pub body: Vec<InstructionNode>,
 }
 
 impl Function {
-    fn new(function_type: &FunctionTypeNode, code: &CodeNode) -> Self {
+    fn new(function_type: &FunctionTypeNode, code: &CodeNode, type_index: u32) -> Self {
         let locals = Vec::from_iter(code.locals.iter().map(|local| Local {
             name: None,
             val_type: local.val_type,
         }));
-        let f = function_type.clone();
         Function {
             locals,
-            instructions: code.expr.instructions.clone(),
-            params: f.params.val_types,
-            returns: f.returns.val_types,
+            body: code.expr.instructions.clone(),
+            type_index,
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::vm::VM;
+use crate::runtime::Runtime;
 
 mod buffer;
 mod instance;
@@ -9,9 +9,9 @@ mod leb128;
 mod module;
 mod node;
 mod parser;
+mod runtime;
 mod stack;
 mod types;
-mod vm;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -28,14 +28,14 @@ fn main() {
     // println!("emit wasm module\n{:#?}", module.buffer);
 
     let instance = instance::Instance::new(&module);
-    let mut vm = VM::default();
+    let mut runtime = Runtime::default();
     let keys = instance
         .exportMap
         .keys()
         .map(|k| k.to_string())
         .collect::<Vec<String>>();
-    let result = vm.run(&instance, &keys[0]);
-    println!("{:#?}", vm);
+    let result = runtime.invoke(&instance, &keys[0]);
+    println!("{:#?}", runtime);
     println!("result: {:#?}", result);
 }
 
@@ -287,7 +287,7 @@ mod module_node_convert_tests {
 
 #[cfg(test)]
 mod vm_tests {
-    use crate::{instance, parser, stack::Number, vm::VM};
+    use crate::{instance, parser, runtime::Runtime, stack::Number};
 
     #[test]
     fn run_i32_const() {
@@ -296,13 +296,13 @@ mod vm_tests {
         let parser = parser::Parser::new().unwrap();
         let module = parser.parse(&mut bytes).expect("Failed to parse");
         let instance = instance::Instance::new(&module);
-        let mut vm = VM::default();
+        let mut vm = Runtime::default();
         let keys = instance
             .exportMap
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.run(&instance, &keys[0]);
+        let result = vm.invoke(&instance, &keys[0]);
 
         assert_eq!(result, Some(Number::i32(42)));
     }

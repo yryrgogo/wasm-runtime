@@ -7,6 +7,7 @@ use crate::{
 #[derive(Debug, Clone)]
 struct Frame {
     function: Function,
+    locals: Vec<Value>,
     base_pointer: usize,
     ip: usize,
 }
@@ -15,6 +16,7 @@ impl Frame {
     fn new(function: Function) -> Self {
         Self {
             function,
+            locals: vec![],
             base_pointer: 0,
             ip: 0,
         }
@@ -22,12 +24,12 @@ impl Frame {
 
     fn next_instruction(&mut self) -> &InstructionNode {
         self.ip += 1;
-        &self.function.instructions[self.ip - 1]
+        &self.function.body[self.ip - 1]
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct VM {
+pub struct Runtime {
     frames: Vec<Frame>,
     frame_index: usize,
     stack: Vec<StackEntry>,
@@ -35,7 +37,7 @@ pub struct VM {
     depth: usize,
 }
 
-impl Default for VM {
+impl Default for Runtime {
     fn default() -> Self {
         Self {
             frames: vec![],
@@ -47,7 +49,7 @@ impl Default for VM {
     }
 }
 
-impl VM {
+impl Runtime {
     fn push_frame(&mut self, function: Function) {
         self.frames.push(Frame::new(function));
         self.frame_index += 1;
@@ -78,7 +80,7 @@ impl VM {
         self.stack.pop().unwrap()
     }
 
-    pub fn run(&mut self, instance: &Instance, name: &String) -> Option<Number> {
+    pub fn invoke(&mut self, instance: &Instance, name: &String) -> Option<Number> {
         let export = instance.exportMap.get(name).unwrap();
         if let Export::Function { index, name: _ } = export {
             let function = &instance.functions[*index];
@@ -89,7 +91,7 @@ impl VM {
 
         let mut frame = self.current_frame();
         while !self.frame_is_empty() {
-            while frame.ip < frame.function.instructions.len() {
+            while frame.ip < frame.function.body.len() {
                 let instruction = frame.next_instruction();
                 match instruction {
                     InstructionNode::I32Const(node) => {
@@ -103,7 +105,10 @@ impl VM {
                     InstructionNode::BrIf(_) => todo!(),
                     InstructionNode::Call(_) => todo!(),
                     InstructionNode::End(_) => {}
-                    InstructionNode::GetLocal(_) => todo!(),
+                    InstructionNode::GetLocal(node) => {
+                        // let value = self.stack[frame.base_pointer + node.index].clone();
+                        // self.stack_push(value);
+                    }
                     InstructionNode::SetLocal(_) => todo!(),
                     InstructionNode::I32Add(_) => todo!(),
                     InstructionNode::I32Sub(_) => todo!(),
