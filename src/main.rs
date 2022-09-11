@@ -101,7 +101,7 @@ mod parser_tests {
 
         let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(export_section_exports[0].name, "add");
+        assert_eq!(export_section_exports[0].name, "i32_add");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -131,7 +131,7 @@ mod parser_tests {
 
         let export_section_exports = &module.export_section().unwrap().exports;
         assert_eq!(export_section_exports.len(), 1);
-        assert_eq!(export_section_exports[0].name, "ge_s10");
+        assert_eq!(export_section_exports[0].name, "if_i32_ge_s");
         assert_eq!(export_section_exports[0].export_desc.index, 0);
         assert_eq!(
             export_section_exports[0].export_desc.export_type,
@@ -263,7 +263,7 @@ mod module_node_convert_tests {
             .export_section()
             .unwrap_or_else(|| panic!("Expected export section"))
             .clone();
-        export_section.update_export_function_name(0, "sub".to_string());
+        export_section.update_export_function_name(0, "i32_sub".to_string());
         module.set_export_section(export_section);
 
         let mut code_section = module
