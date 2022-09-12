@@ -7,24 +7,33 @@ use crate::{
 #[derive(Debug, Clone)]
 struct Frame {
     function: FunctionInstance,
-    locals: Vec<Value>,
+    locals: Vec<Option<Value>>,
     base_pointer: usize,
     ip: usize,
 }
 
 impl Frame {
     fn new(function: FunctionInstance) -> Self {
+        let local_count = function.code.locals.len();
         Self {
             function,
-            locals: vec![],
+            locals: vec![None; local_count],
             base_pointer: 0,
             ip: 0,
         }
     }
 
-    fn next_instruction(&mut self) -> &InstructionNode {
+    fn next_instruction(&mut self) -> InstructionNode {
         self.ip += 1;
-        &self.function.code.body[self.ip - 1]
+        self.function.code.body[self.ip - 1].clone()
+    }
+
+    fn get_local(&self, index: usize) -> &Option<Value> {
+        &self.locals[index]
+    }
+
+    fn set_local(&mut self, index: usize, value: Value) {
+        self.locals[index] = Some(value);
     }
 }
 
@@ -106,10 +115,17 @@ impl Runtime {
                     InstructionNode::Call(_) => todo!(),
                     InstructionNode::End(_) => {}
                     InstructionNode::GetLocal(node) => {
-                        // let value = self.stack[frame.base_pointer + node.index].clone();
-                        // self.stack_push(value);
+                        let value = frame.get_local(node.index as usize);
+                        self.stack_push(StackEntry::value(value.clone().unwrap()));
                     }
-                    InstructionNode::SetLocal(_) => todo!(),
+                    InstructionNode::SetLocal(node) => {
+                        let entry = self.stack_pop();
+                        match entry {
+                            StackEntry::value(v) => {
+                                frame.set_local(node.index as usize, v);
+                            }
+                        }
+                    }
                     InstructionNode::I32Add(_) => todo!(),
                     InstructionNode::I32Sub(_) => todo!(),
                     InstructionNode::I32GeS(_) => todo!(),
