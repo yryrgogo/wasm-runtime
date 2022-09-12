@@ -1,6 +1,9 @@
 use std::env;
 
-use crate::runtime::Runtime;
+use crate::{
+    runtime::Runtime,
+    stack::{Number, Value},
+};
 
 mod buffer;
 mod instance;
@@ -35,7 +38,12 @@ fn main() {
         .keys()
         .map(|k| k.to_string())
         .collect::<Vec<String>>();
-    let result = runtime.invoke(&instance, &keys[0]);
+
+    let module_args = args[2..]
+        .iter()
+        .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+        .collect::<Vec<Value>>();
+    let result = runtime.invoke(&instance, &keys[0], Some(module_args));
     println!("{:#?}", runtime);
     println!("result: {:#?}", result);
 }
@@ -305,7 +313,7 @@ mod vm_tests {
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.invoke(&instance, &keys[0]);
+        let result = vm.invoke(&instance, &keys[0], None);
 
         assert_eq!(result, Some(Number::i32(42)));
     }

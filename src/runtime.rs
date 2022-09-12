@@ -13,13 +13,28 @@ struct Frame {
 }
 
 impl Frame {
-    fn new(function: FunctionInstance) -> Self {
-        let local_count = function.code.locals.len();
-        Self {
-            function,
-            locals: vec![None; local_count],
-            base_pointer: 0,
-            ip: 0,
+    fn new(function: FunctionInstance, args: Option<Vec<Value>>) -> Self {
+        let local_count =
+            function.code.locals.len() + function.function_type.params.val_types.len();
+
+        if let Some(args) = args {
+            let mut locals = vec![None; local_count];
+            for (i, arg) in args.into_iter().enumerate() {
+                locals[i] = Some(arg);
+            }
+            Frame {
+                function,
+                locals,
+                base_pointer: 0,
+                ip: 0,
+            }
+        } else {
+            Frame {
+                function,
+                locals: vec![None; local_count],
+                base_pointer: 0,
+                ip: 0,
+            }
         }
     }
 
@@ -59,8 +74,8 @@ impl Default for Runtime {
 }
 
 impl Runtime {
-    fn push_frame(&mut self, function: FunctionInstance) {
-        self.frames.push(Frame::new(function));
+    fn push_frame(&mut self, function: FunctionInstance, args: Option<Vec<Value>>) {
+        self.frames.push(Frame::new(function, args));
         self.frame_index += 1;
     }
 
@@ -89,11 +104,16 @@ impl Runtime {
         self.stack.pop().unwrap()
     }
 
-    pub fn invoke(&mut self, instance: &Instance, name: &String) -> Option<Number> {
+    pub fn invoke(
+        &mut self,
+        instance: &Instance,
+        name: &String,
+        args: Option<Vec<Value>>,
+    ) -> Option<Number> {
         let export = instance.exportMap.get(name).unwrap();
         if let Export::Function { index, name: _ } = export {
             let function = &instance.functions[*index];
-            self.push_frame(function.clone());
+            self.push_frame(function.clone(), args);
         } else {
             panic!("cannot run non-function export");
         };
@@ -126,7 +146,18 @@ impl Runtime {
                             }
                         }
                     }
-                    InstructionNode::I32Add(_) => todo!(),
+                    InstructionNode::I32Add(_) => {
+                        let a = self.stack_pop();
+                        let b = self.stack_pop();
+                        match (a, b) {
+                            (
+                                StackEntry::value(Value::num(a)),
+                                StackEntry::value(Value::num(b)),
+                            ) => {
+                                self.stack_push(StackEntry::value(Value::num(a + b)));
+                            }
+                        }
+                    }
                     InstructionNode::I32Sub(_) => todo!(),
                     InstructionNode::I32GeS(_) => todo!(),
                     // InstructionNode::I32Add => {
