@@ -295,8 +295,12 @@ mod module_node_convert_tests {
 }
 
 #[cfg(test)]
-mod vm_tests {
-    use crate::{instance, parser, runtime::Runtime, stack::Number};
+mod runtime_tests {
+    use crate::{
+        instance, parser,
+        runtime::Runtime,
+        stack::{Number, Value},
+    };
 
     #[test]
     fn run_i32_const() {
@@ -316,5 +320,75 @@ mod vm_tests {
         let result = vm.invoke(&instance, &keys[0], None);
 
         assert_eq!(result, Some(Number::i32(42)));
+    }
+
+    #[test]
+    fn run_i32_local_get_set() {
+        let file_path = "test/fixtures/local_i32_var.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&module);
+        let mut vm = Runtime::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+        let result = vm.invoke(&instance, &keys[0], None);
+
+        assert_eq!(result, Some(Number::i32(55)));
+    }
+
+    #[test]
+    fn run_i32_add() {
+        let file_path = "test/fixtures/i32_add.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&module);
+        let mut vm = Runtime::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let args = vec!["1", "2"]
+            .iter()
+            .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+            .collect::<Vec<Value>>();
+        let result = vm.invoke(&instance, &keys[0], Some(args));
+
+        assert_eq!(result, Some(Number::i32(3)));
+    }
+
+    #[test]
+    fn run_i32_sub() {
+        let file_path = "test/fixtures/i32_sub.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&module);
+        let mut vm = Runtime::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let args = vec!["1", "2"]
+            .iter()
+            .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+            .collect::<Vec<Value>>();
+        let result = vm.invoke(&instance, &keys[0], Some(args));
+
+        assert_eq!(result, Some(Number::i32(1)));
     }
 }

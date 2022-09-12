@@ -158,18 +158,19 @@ impl Runtime {
                             }
                         }
                     }
-                    InstructionNode::I32Sub(_) => todo!(),
+                    InstructionNode::I32Sub(_) => {
+                        let a = self.stack_pop();
+                        let b = self.stack_pop();
+                        match (a, b) {
+                            (
+                                StackEntry::value(Value::num(a)),
+                                StackEntry::value(Value::num(b)),
+                            ) => {
+                                self.stack_push(StackEntry::value(Value::num(a - b)));
+                            }
+                        }
+                    }
                     InstructionNode::I32GeS(_) => todo!(),
-                    // InstructionNode::I32Add => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a + b);
-                    // }
-                    // InstructionNode::I32Sub => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a - b);
-                    // }
                     // InstructionNode::I32Mul => {
                     //     let a = frame.pop_u32();
                     //     let b = frame.pop_u32();

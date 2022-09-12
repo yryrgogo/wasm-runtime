@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Clone)]
 pub enum StackEntry {
@@ -21,13 +21,55 @@ pub enum Number {
 impl Add for Number {
     type Output = Number;
 
-    fn add(self, other: Number) -> Number {
-        match (self, other) {
+    fn add(self, rhs: Number) -> Number {
+        match (self, rhs) {
             (Number::i32(a), Number::i32(b)) => Number::i32(a + b),
             (Number::i64(a), Number::i64(b)) => Number::i64(a + b),
             (Number::f32(a), Number::f32(b)) => Number::f32(a + b),
             (Number::f64(a), Number::f64(b)) => Number::f64(a + b),
             _ => panic!("Cannot add numbers of different types"),
+        }
+    }
+}
+
+impl Sub for Number {
+    type Output = Number;
+
+    fn sub(self, rhs: Number) -> Number {
+        match (self, rhs) {
+            (Number::i32(a), Number::i32(b)) => Number::i32(a - b),
+            (Number::i64(a), Number::i64(b)) => Number::i64(a - b),
+            (Number::f32(a), Number::f32(b)) => Number::f32(a - b),
+            (Number::f64(a), Number::f64(b)) => Number::f64(a - b),
+            _ => panic!("Cannot subtract numbers of different types"),
+        }
+    }
+}
+
+impl Mul for Number {
+    type Output = Number;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Number::i32(a), Number::i32(b)) => Number::i32(a * b),
+            (Number::i64(a), Number::i64(b)) => Number::i64(a * b),
+            (Number::f32(a), Number::f32(b)) => Number::f32(a * b),
+            (Number::f64(a), Number::f64(b)) => Number::f64(a * b),
+            _ => panic!("Cannot multiply numbers of different types"),
+        }
+    }
+}
+
+impl Div for Number {
+    type Output = Number;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Number::i32(a), Number::i32(b)) => Number::i32(a / b),
+            (Number::i64(a), Number::i64(b)) => Number::i64(a / b),
+            (Number::f32(a), Number::f32(b)) => Number::f32(a / b),
+            (Number::f64(a), Number::f64(b)) => Number::f64(a / b),
+            _ => panic!("Cannot divide numbers of different types"),
         }
     }
 }
