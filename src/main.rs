@@ -27,11 +27,10 @@ fn main() {
     let mut module = parser.parse(&mut bytes).expect("Failed to parse");
 
     module.emit();
-    module.make();
     // println!("Successfully parse module\n{:#?}", module);
     // println!("emit wasm module\n{:#?}", module.buffer);
 
-    let instance = instance::Instance::new(&module);
+    let instance = instance::Instance::new(&mut module);
     let mut runtime = Runtime::default();
     let keys = instance
         .exportMap
@@ -43,7 +42,7 @@ fn main() {
         .iter()
         .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
         .collect::<Vec<Value>>();
-    let result = runtime.invoke(&instance, &keys[0], Some(module_args));
+    let result = runtime.execute(&instance, &keys[0], Some(module_args));
     println!("{:#?}", runtime);
     println!("result: {:#?}", result);
 }
@@ -310,14 +309,14 @@ mod runtime_tests {
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
         module.make();
 
-        let instance = instance::Instance::new(&module);
+        let instance = instance::Instance::new(&mut module);
         let mut vm = Runtime::default();
         let keys = instance
             .exportMap
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.invoke(&instance, &keys[0], None);
+        let result = vm.execute(&instance, &keys[0], None);
 
         assert_eq!(result, Some(Number::i32(42)));
     }
@@ -330,14 +329,14 @@ mod runtime_tests {
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
         module.make();
 
-        let instance = instance::Instance::new(&module);
+        let instance = instance::Instance::new(&mut module);
         let mut vm = Runtime::default();
         let keys = instance
             .exportMap
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.invoke(&instance, &keys[0], None);
+        let result = vm.execute(&instance, &keys[0], None);
 
         assert_eq!(result, Some(Number::i32(55)));
     }
@@ -350,7 +349,7 @@ mod runtime_tests {
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
         module.make();
 
-        let instance = instance::Instance::new(&module);
+        let instance = instance::Instance::new(&mut module);
         let mut vm = Runtime::default();
         let keys = instance
             .exportMap
@@ -362,7 +361,7 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.invoke(&instance, &keys[0], Some(args));
+        let result = vm.execute(&instance, &keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(3)));
     }
@@ -375,7 +374,7 @@ mod runtime_tests {
         let mut module = parser.parse(&mut bytes).expect("Failed to parse");
         module.make();
 
-        let instance = instance::Instance::new(&module);
+        let instance = instance::Instance::new(&mut module);
         let mut vm = Runtime::default();
         let keys = instance
             .exportMap
@@ -387,7 +386,7 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.invoke(&instance, &keys[0], Some(args));
+        let result = vm.execute(&instance, &keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(1)));
     }

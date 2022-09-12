@@ -104,7 +104,7 @@ impl Runtime {
         self.stack.pop().unwrap()
     }
 
-    pub fn invoke(
+    pub fn execute(
         &mut self,
         instance: &Instance,
         name: &String,

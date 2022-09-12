@@ -13,7 +13,8 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn new(module: &ModuleNode) -> Self {
+    pub fn new(module: &mut ModuleNode) -> Self {
+        module.make();
         let functions = Instance::instantiate_functions(module);
         let exportMap = Instance::instantiate_exports(module);
 
