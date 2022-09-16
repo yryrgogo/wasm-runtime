@@ -1,6 +1,6 @@
 use crate::{
     instance::{Export, FunctionInstance, Instance},
-    node::InstructionNode,
+    node::{ExpressionNode, InstructionNode},
     stack::{Label, LabelType, Number, StackEntry, Value},
     types::{BlockType, NumberType, ValueType},
 };
@@ -163,62 +163,26 @@ impl Runtime {
             InstructionNode::I32Const(node) => {
                 self.push_stack(StackEntry::value(Value::num(Number::i32(node.value))));
             }
-            InstructionNode::Block(_) => todo!(),
-            InstructionNode::Loop(_) => todo!(),
+            InstructionNode::Block(node) => {
+                self.push_label(LabelType::Block, node.block_type);
+                self.expression(frame, &node.expr);
+                self.cleanup_block_label(node.block_type);
+            }
+            InstructionNode::Loop(node) => {
+                self.push_label(LabelType::Loop, node.block_type);
+                self.expression(frame, &node.expr);
+                self.cleanup_block_label(node.block_type);
+            }
             InstructionNode::If(node) => {
                 let condition = self.pop_stack();
                 if let StackEntry::value(Value::num(Number::i32(value))) = condition {
                     if value != 0 {
                         self.push_label(LabelType::If, node.block_type);
-                        node.then_expr.instructions.iter().for_each(|instruction| {
-                            self.invoke(frame, instruction);
-                        });
-
-                        match node.block_type {
-                            BlockType::Empty => {
-                                self.pop_label();
-                            }
-                            BlockType::ValType(ValueType::Number(v)) => {
-                                let result = self.pop_stack();
-                                match v {
-                                    NumberType::I32 => match result.clone() {
-                                        StackEntry::value(Value::num(n)) => match n {
-                                            Number::i32(_) => {}
-                                            _ => unreachable!(),
-                                        },
-                                        StackEntry::label(_) => unreachable!(),
-                                    },
-                                    NumberType::I64 => match result.clone() {
-                                        StackEntry::value(Value::num(n)) => match n {
-                                            Number::i64(_) => {}
-                                            _ => unreachable!(),
-                                        },
-                                        StackEntry::label(_) => unreachable!(),
-                                    },
-                                    NumberType::F32 => match result.clone() {
-                                        StackEntry::value(Value::num(n)) => match n {
-                                            Number::f32(_) => {}
-                                            _ => unreachable!(),
-                                        },
-                                        StackEntry::label(_) => unreachable!(),
-                                    },
-                                    NumberType::F64 => match result.clone() {
-                                        StackEntry::value(Value::num(n)) => match n {
-                                            Number::f64(_) => {}
-                                            _ => unreachable!(),
-                                        },
-                                        StackEntry::label(_) => unreachable!(),
-                                    },
-                                }
-                                self.pop_label();
-                                self.push_stack(result);
-                            }
-                        }
+                        self.expression(frame, &node.then_expr);
+                        self.cleanup_block_label(node.block_type);
                     } else if let Some(else_) = node.else_expr.clone() {
                         self.push_label(LabelType::If, node.block_type);
-                        else_.instructions.iter().for_each(|instruction| {
-                            self.invoke(frame, instruction);
-                        });
+                        self.expression(frame, &else_);
                         let result = self.pop_stack();
                         self.pop_label();
                         self.push_stack(result);
@@ -328,6 +292,55 @@ impl Runtime {
               //     let b = frame.pop_u32();
               //     frame.push_u32(a >> b);
               // }
+        }
+    }
+
+    pub fn expression(&mut self, frame: &mut Frame, expr: &ExpressionNode) {
+        expr.instructions.iter().for_each(|instruction| {
+            self.invoke(frame, instruction);
+        });
+    }
+
+    fn cleanup_block_label(&mut self, block_type: BlockType) {
+        match block_type {
+            BlockType::Empty => {
+                self.pop_label();
+            }
+            BlockType::ValType(ValueType::Number(v)) => {
+                let result = self.pop_stack();
+                match v {
+                    NumberType::I32 => match result.clone() {
+                        StackEntry::value(Value::num(n)) => match n {
+                            Number::i32(_) => {}
+                            _ => unreachable!(),
+                        },
+                        StackEntry::label(_) => unreachable!(),
+                    },
+                    NumberType::I64 => match result.clone() {
+                        StackEntry::value(Value::num(n)) => match n {
+                            Number::i64(_) => {}
+                            _ => unreachable!(),
+                        },
+                        StackEntry::label(_) => unreachable!(),
+                    },
+                    NumberType::F32 => match result.clone() {
+                        StackEntry::value(Value::num(n)) => match n {
+                            Number::f32(_) => {}
+                            _ => unreachable!(),
+                        },
+                        StackEntry::label(_) => unreachable!(),
+                    },
+                    NumberType::F64 => match result.clone() {
+                        StackEntry::value(Value::num(n)) => match n {
+                            Number::f64(_) => {}
+                            _ => unreachable!(),
+                        },
+                        StackEntry::label(_) => unreachable!(),
+                    },
+                }
+                self.pop_label();
+                self.push_stack(result);
+            }
         }
     }
 }
