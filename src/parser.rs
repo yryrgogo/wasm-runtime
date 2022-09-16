@@ -182,7 +182,9 @@ impl Parser {
             local_entries.push(local_entry);
         }
 
-        let expr = self.expression(bytes).expect("Failed to parse expression");
+        let expr = self
+            .expression(bytes, None)
+            .expect("Failed to parse expression");
 
         Ok(CodeNode {
             function_body_size,
@@ -205,8 +207,16 @@ impl Parser {
         })
     }
 
-    fn expression(&self, bytes: &mut Vec<u8>) -> Result<ExpressionNode, Box<dyn Error>> {
+    fn expression(
+        &self,
+        bytes: &mut Vec<u8>,
+        default_instructions: impl IntoIterator<Item = InstructionNode>,
+    ) -> Result<ExpressionNode, Box<dyn Error>> {
         let mut instructions: Vec<InstructionNode> = vec![];
+        default_instructions
+            .into_iter()
+            .for_each(|i| instructions.push(i));
+
         loop {
             let instruction = self
                 .instruction(bytes)
@@ -238,28 +248,36 @@ impl Parser {
             Instruction::Nop => todo!(),
             Instruction::Block => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
-                let expr = self.expression(bytes).expect("Failed to parse expression");
+                let expr = self
+                    .expression(bytes, None)
+                    .expect("Failed to parse expression");
                 Ok(InstructionNode::Block(BlockInstructionNode::new(
                     block_type, expr,
                 )))
             }
             Instruction::Loop => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
-                let expr = self.expression(bytes).expect("Failed to parse expression");
+                let expr = self
+                    .expression(bytes, None)
+                    .expect("Failed to parse expression");
                 Ok(InstructionNode::Loop(LoopInstructionNode::new(
                     block_type, expr,
                 )))
             }
             Instruction::If => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
-                let then_expr = self
-                    .expression(bytes)
+                let mut then_expr = self
+                    .expression(bytes, None)
                     .expect("Failed to parse if-then expression");
-                let last_instr = then_expr.instructions.last().unwrap();
+                let last_instr = then_expr
+                    .instructions
+                    .pop()
+                    .unwrap_or_else(|| panic!("Failed to pop if-then instruction"));
+
                 match last_instr {
                     InstructionNode::Else(_) => {
                         let else_expr = self
-                            .expression(bytes)
+                            .expression(bytes, [last_instr.clone()])
                             .expect("Failed to parse if-else expression");
                         Ok(InstructionNode::If(IfInstructionNode::new(
                             block_type,
@@ -267,9 +285,13 @@ impl Parser {
                             Some(else_expr),
                         )))
                     }
-                    _ => Ok(InstructionNode::If(IfInstructionNode::new(
-                        block_type, then_expr, None,
-                    ))),
+                    InstructionNode::End(_) => {
+                        then_expr.instructions.push(last_instr);
+                        Ok(InstructionNode::If(IfInstructionNode::new(
+                            block_type, then_expr, None,
+                        )))
+                    }
+                    _ => panic!("Invalid if-then expression"),
                 }
             }
             Instruction::Else => {

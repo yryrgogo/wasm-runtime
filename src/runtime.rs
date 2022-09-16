@@ -1,7 +1,8 @@
 use crate::{
     instance::{Export, FunctionInstance, Instance},
-    node::InstructionNode,
-    stack::{Number, StackEntry, Value},
+    node::{FunctionNode, FunctionTypeNode, InstructionNode, ResultTypeNode},
+    stack::{Label, LabelType, Number, StackEntry, Value},
+    types::{BlockType, NumberType},
 };
 
 #[derive(Debug, Clone)]
@@ -104,6 +105,15 @@ impl Runtime {
         self.stack.pop().unwrap()
     }
 
+    fn pop_result(&mut self) -> Option<StackEntry> {
+        self.sp -= 1;
+        self.stack.pop()
+    }
+
+    fn push_label(&mut self, label_type: LabelType, arity: BlockType) {
+        self.stack_push(StackEntry::label(Label { label_type, arity }));
+    }
+
     pub fn execute(
         &mut self,
         instance: &Instance,
@@ -122,114 +132,149 @@ impl Runtime {
         while !self.frame_is_empty() {
             while frame.ip < frame.function.code.body.len() {
                 let instruction = frame.next_instruction();
-                match instruction {
-                    InstructionNode::I32Const(node) => {
-                        self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
-                    }
-                    InstructionNode::Block(_) => todo!(),
-                    InstructionNode::Loop(_) => todo!(),
-                    InstructionNode::If(_) => todo!(),
-                    InstructionNode::Else(_) => todo!(),
-                    InstructionNode::Br(_) => todo!(),
-                    InstructionNode::BrIf(_) => todo!(),
-                    InstructionNode::Call(_) => todo!(),
-                    InstructionNode::End(_) => {}
-                    InstructionNode::GetLocal(node) => {
-                        let value = frame.get_local(node.index as usize);
-                        self.stack_push(StackEntry::value(value.clone().unwrap()));
-                    }
-                    InstructionNode::SetLocal(node) => {
-                        let entry = self.stack_pop();
-                        match entry {
-                            StackEntry::value(v) => {
-                                frame.set_local(node.index as usize, v);
-                            }
-                        }
-                    }
-                    InstructionNode::I32Add(_) => {
-                        let a = self.stack_pop();
-                        let b = self.stack_pop();
-                        match (a, b) {
-                            (
-                                StackEntry::value(Value::num(a)),
-                                StackEntry::value(Value::num(b)),
-                            ) => {
-                                self.stack_push(StackEntry::value(Value::num(a + b)));
-                            }
-                        }
-                    }
-                    InstructionNode::I32Sub(_) => {
-                        let a = self.stack_pop();
-                        let b = self.stack_pop();
-                        match (a, b) {
-                            (
-                                StackEntry::value(Value::num(a)),
-                                StackEntry::value(Value::num(b)),
-                            ) => {
-                                self.stack_push(StackEntry::value(Value::num(a - b)));
-                            }
-                        }
-                    }
-                    InstructionNode::I32GeS(_) => todo!(),
-                    // InstructionNode::I32Mul => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a * b);
-                    // }
-                    // InstructionNode::I32DivS => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a / b);
-                    // }
-                    // InstructionNode::I32DivU => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a / b);
-                    // }
-                    // InstructionNode::I32RemS => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a % b);
-                    // }
-                    // InstructionNode::I32RemU => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a % b);
-                    // }
-                    // InstructionNode::I32And => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a & b);
-                    // }
-                    // InstructionNode::I32Or => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a | b);
-                    // }
-                    // InstructionNode::I32Xor => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a ^ b);
-                    // }
-                    // InstructionNode::I32Shl => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a << b);
-                    // }
-                    // InstructionNode::I32ShrS => {
-                    //     let a = frame.pop_u32();
-                    //     let b = frame.pop_u32();
-                    //     frame.push_u32(a >> b);
-                    // }
-                }
+                self.invoke(&mut frame, &instruction);
             }
             self.pop_frame();
         }
-        let entry = self.stack_pop();
+        let entry = self.pop_result();
         match entry {
-            StackEntry::value(value) => match value {
-                Value::num(number) => Some(number),
+            Some(entry) => match entry {
+                StackEntry::value(value) => match value {
+                    Value::num(number) => Some(number),
+                },
+                _ => panic!("result must be value"),
             },
+            None => todo!(),
+        }
+    }
+
+    pub fn invoke(&mut self, frame: &mut Frame, instruction: &InstructionNode) {
+        match instruction {
+            InstructionNode::I32Const(node) => {
+                self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
+            }
+            InstructionNode::Block(_) => todo!(),
+            InstructionNode::Loop(_) => todo!(),
+            InstructionNode::If(node) => {
+                let condition = self.stack_pop();
+                if let StackEntry::value(Value::num(Number::i32(value))) = condition {
+                    if value != 0 {
+                        self.push_label(LabelType::If, node.block_type);
+                        node.then_expr.instructions.iter().for_each(|instruction| {
+                            dbg!("{:#?}", instruction);
+                            self.invoke(frame, instruction);
+                        });
+                    } else if let Some(else_) = node.else_expr.clone() {
+                        self.push_label(LabelType::If, node.block_type);
+                        else_.instructions.iter().for_each(|instruction| {
+                            self.invoke(frame, instruction);
+                        });
+                    }
+                } else {
+                    panic!("if condition must be i32");
+                }
+            }
+            InstructionNode::Else(_) => todo!(),
+            InstructionNode::Br(_) => todo!(),
+            InstructionNode::BrIf(_) => todo!(),
+            InstructionNode::Call(_) => todo!(),
+            InstructionNode::End(_) => {}
+            InstructionNode::GetLocal(node) => {
+                let value = frame.get_local(node.index as usize);
+                self.stack_push(StackEntry::value(value.clone().unwrap()));
+            }
+            InstructionNode::SetLocal(node) => {
+                let entry = self.stack_pop();
+                match entry {
+                    StackEntry::value(v) => {
+                        frame.set_local(node.index as usize, v);
+                    }
+                    _ => panic!("set_local must be value"),
+                }
+            }
+            InstructionNode::I32Add(_) => {
+                let a = self.stack_pop();
+                let b = self.stack_pop();
+                match (a, b) {
+                    (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
+                        self.stack_push(StackEntry::value(Value::num(a + b)));
+                    }
+                    _ => panic!("i32.add must have two i32 values on the stack"),
+                }
+            }
+            InstructionNode::I32Sub(_) => {
+                let a = self.stack_pop();
+                let b = self.stack_pop();
+                match (a, b) {
+                    (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
+                        self.stack_push(StackEntry::value(Value::num(b - a)));
+                    }
+                    _ => panic!("i32.sub must have two i32 values on the stack"),
+                }
+            }
+            InstructionNode::I32GeS(_) => {
+                let a = self.stack_pop();
+                let b = self.stack_pop();
+                match (a, b) {
+                    (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
+                        self.stack_push(StackEntry::value(Value::num(if b >= a {
+                            Number::i32(1)
+                        } else {
+                            Number::i32(0)
+                        })));
+                    }
+                    _ => panic!("i32.ge_s must have two i32 values on the stack"),
+                }
+            } // InstructionNode::I32Mul => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a * b);
+              // }
+              // InstructionNode::I32DivS => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a / b);
+              // }
+              // InstructionNode::I32DivU => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a / b);
+              // }
+              // InstructionNode::I32RemS => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a % b);
+              // }
+              // InstructionNode::I32RemU => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a % b);
+              // }
+              // InstructionNode::I32And => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a & b);
+              // }
+              // InstructionNode::I32Or => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a | b);
+              // }
+              // InstructionNode::I32Xor => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a ^ b);
+              // }
+              // InstructionNode::I32Shl => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a << b);
+              // }
+              // InstructionNode::I32ShrS => {
+              //     let a = frame.pop_u32();
+              //     let b = frame.pop_u32();
+              //     frame.push_u32(a >> b);
+              // }
         }
     }
 }
