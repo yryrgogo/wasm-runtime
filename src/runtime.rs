@@ -104,11 +104,17 @@ impl Runtime {
 
     fn pop_stack(&mut self) -> StackEntry {
         self.sp -= 1;
-        self.stack.pop().unwrap()
+        self.stack
+            .pop()
+            .unwrap_or_else(|| panic!("No stack entry to pop"))
     }
 
     fn pop_result(&mut self) -> Option<StackEntry> {
-        Some(self.pop_stack())
+        if self.sp > 0 {
+            Some(self.pop_stack())
+        } else {
+            None
+        }
     }
 
     fn push_label(&mut self, label_type: LabelType, arity: BlockType) {
@@ -122,6 +128,7 @@ impl Runtime {
             .pop()
             .unwrap_or_else(|| panic!("No label to pop"));
         let _ = self.stack.split_off(label_idx);
+        self.sp = label_idx;
     }
 
     pub fn execute(
@@ -154,7 +161,7 @@ impl Runtime {
                 },
                 _ => panic!("result must be value"),
             },
-            None => todo!("{:#?}", entry),
+            None => None,
         }
     }
 
