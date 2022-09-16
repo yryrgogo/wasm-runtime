@@ -2,7 +2,7 @@ use crate::{
     instance::{Export, FunctionInstance, Instance},
     node::InstructionNode,
     stack::{Label, LabelType, Number, StackEntry, Value},
-    types::BlockType,
+    types::{BlockType, NumberType, ValueType},
 };
 
 #[derive(Debug, Clone)]
@@ -108,8 +108,7 @@ impl Runtime {
     }
 
     fn pop_result(&mut self) -> Option<StackEntry> {
-        self.sp -= 1;
-        self.stack.pop()
+        Some(self.pop_stack())
     }
 
     fn push_label(&mut self, label_type: LabelType, arity: BlockType) {
@@ -174,9 +173,47 @@ impl Runtime {
                         node.then_expr.instructions.iter().for_each(|instruction| {
                             self.invoke(frame, instruction);
                         });
-                        let result = self.pop_stack();
-                        self.pop_label();
-                        self.push_stack(result);
+
+                        match node.block_type {
+                            BlockType::Empty => {
+                                self.pop_label();
+                            }
+                            BlockType::ValType(ValueType::Number(v)) => {
+                                let result = self.pop_stack();
+                                match v {
+                                    NumberType::I32 => match result.clone() {
+                                        StackEntry::value(Value::num(n)) => match n {
+                                            Number::i32(_) => {}
+                                            _ => unreachable!(),
+                                        },
+                                        StackEntry::label(_) => unreachable!(),
+                                    },
+                                    NumberType::I64 => match result.clone() {
+                                        StackEntry::value(Value::num(n)) => match n {
+                                            Number::i64(_) => {}
+                                            _ => unreachable!(),
+                                        },
+                                        StackEntry::label(_) => unreachable!(),
+                                    },
+                                    NumberType::F32 => match result.clone() {
+                                        StackEntry::value(Value::num(n)) => match n {
+                                            Number::f32(_) => {}
+                                            _ => unreachable!(),
+                                        },
+                                        StackEntry::label(_) => unreachable!(),
+                                    },
+                                    NumberType::F64 => match result.clone() {
+                                        StackEntry::value(Value::num(n)) => match n {
+                                            Number::f64(_) => {}
+                                            _ => unreachable!(),
+                                        },
+                                        StackEntry::label(_) => unreachable!(),
+                                    },
+                                }
+                                self.pop_label();
+                                self.push_stack(result);
+                            }
+                        }
                     } else if let Some(else_) = node.else_expr.clone() {
                         self.push_label(LabelType::If, node.block_type);
                         else_.instructions.iter().for_each(|instruction| {
