@@ -1,12 +1,12 @@
 use crate::{
     instance::{Export, FunctionInstance, Instance},
-    node::{FunctionNode, FunctionTypeNode, InstructionNode, ResultTypeNode},
+    node::InstructionNode,
     stack::{Label, LabelType, Number, StackEntry, Value},
-    types::{BlockType, NumberType},
+    types::BlockType,
 };
 
 #[derive(Debug, Clone)]
-struct Frame {
+pub struct Frame {
     function: FunctionInstance,
     locals: Vec<Option<Value>>,
     base_pointer: usize,
@@ -60,6 +60,7 @@ pub struct Runtime {
     stack: Vec<StackEntry>,
     sp: usize,
     depth: usize,
+    label_positions: Vec<usize>,
 }
 
 impl Default for Runtime {
@@ -70,6 +71,7 @@ impl Default for Runtime {
             stack: vec![],
             sp: 0,
             depth: 0,
+            label_positions: vec![],
         }
     }
 }
@@ -95,12 +97,12 @@ impl Runtime {
         self.frame_index == 0
     }
 
-    fn stack_push(&mut self, entry: StackEntry) {
+    fn push_stack(&mut self, entry: StackEntry) {
         self.stack.push(entry);
         self.sp += 1;
     }
 
-    fn stack_pop(&mut self) -> StackEntry {
+    fn pop_stack(&mut self) -> StackEntry {
         self.sp -= 1;
         self.stack.pop().unwrap()
     }
@@ -111,7 +113,16 @@ impl Runtime {
     }
 
     fn push_label(&mut self, label_type: LabelType, arity: BlockType) {
-        self.stack_push(StackEntry::label(Label { label_type, arity }));
+        self.push_stack(StackEntry::label(Label { label_type, arity }));
+        self.label_positions.push(self.sp - 1);
+    }
+
+    fn pop_label(&mut self) {
+        let label_idx = self
+            .label_positions
+            .pop()
+            .unwrap_or_else(|| panic!("No label to pop"));
+        let _ = self.stack.split_off(label_idx);
     }
 
     pub fn execute(
@@ -144,47 +155,52 @@ impl Runtime {
                 },
                 _ => panic!("result must be value"),
             },
-            None => todo!(),
+            None => todo!("{:#?}", entry),
         }
     }
 
     pub fn invoke(&mut self, frame: &mut Frame, instruction: &InstructionNode) {
         match instruction {
             InstructionNode::I32Const(node) => {
-                self.stack_push(StackEntry::value(Value::num(Number::i32(node.value))));
+                self.push_stack(StackEntry::value(Value::num(Number::i32(node.value))));
             }
             InstructionNode::Block(_) => todo!(),
             InstructionNode::Loop(_) => todo!(),
             InstructionNode::If(node) => {
-                let condition = self.stack_pop();
+                let condition = self.pop_stack();
                 if let StackEntry::value(Value::num(Number::i32(value))) = condition {
                     if value != 0 {
                         self.push_label(LabelType::If, node.block_type);
                         node.then_expr.instructions.iter().for_each(|instruction| {
-                            dbg!("{:#?}", instruction);
                             self.invoke(frame, instruction);
                         });
+                        let result = self.pop_stack();
+                        self.pop_label();
+                        self.push_stack(result);
                     } else if let Some(else_) = node.else_expr.clone() {
                         self.push_label(LabelType::If, node.block_type);
                         else_.instructions.iter().for_each(|instruction| {
                             self.invoke(frame, instruction);
                         });
+                        let result = self.pop_stack();
+                        self.pop_label();
+                        self.push_stack(result);
                     }
                 } else {
                     panic!("if condition must be i32");
                 }
             }
-            InstructionNode::Else(_) => todo!(),
+            InstructionNode::Else(_) => {}
             InstructionNode::Br(_) => todo!(),
             InstructionNode::BrIf(_) => todo!(),
             InstructionNode::Call(_) => todo!(),
             InstructionNode::End(_) => {}
             InstructionNode::GetLocal(node) => {
                 let value = frame.get_local(node.index as usize);
-                self.stack_push(StackEntry::value(value.clone().unwrap()));
+                self.push_stack(StackEntry::value(value.clone().unwrap()));
             }
             InstructionNode::SetLocal(node) => {
-                let entry = self.stack_pop();
+                let entry = self.pop_stack();
                 match entry {
                     StackEntry::value(v) => {
                         frame.set_local(node.index as usize, v);
@@ -193,31 +209,31 @@ impl Runtime {
                 }
             }
             InstructionNode::I32Add(_) => {
-                let a = self.stack_pop();
-                let b = self.stack_pop();
+                let a = self.pop_stack();
+                let b = self.pop_stack();
                 match (a, b) {
                     (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
-                        self.stack_push(StackEntry::value(Value::num(a + b)));
+                        self.push_stack(StackEntry::value(Value::num(a + b)));
                     }
                     _ => panic!("i32.add must have two i32 values on the stack"),
                 }
             }
             InstructionNode::I32Sub(_) => {
-                let a = self.stack_pop();
-                let b = self.stack_pop();
+                let a = self.pop_stack();
+                let b = self.pop_stack();
                 match (a, b) {
                     (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
-                        self.stack_push(StackEntry::value(Value::num(b - a)));
+                        self.push_stack(StackEntry::value(Value::num(b - a)));
                     }
                     _ => panic!("i32.sub must have two i32 values on the stack"),
                 }
             }
             InstructionNode::I32GeS(_) => {
-                let a = self.stack_pop();
-                let b = self.stack_pop();
+                let a = self.pop_stack();
+                let b = self.pop_stack();
                 match (a, b) {
                     (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
-                        self.stack_push(StackEntry::value(Value::num(if b >= a {
+                        self.push_stack(StackEntry::value(Value::num(if b >= a {
                             Number::i32(1)
                         } else {
                             Number::i32(0)

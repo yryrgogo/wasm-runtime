@@ -392,7 +392,7 @@ mod runtime_tests {
     }
 
     #[test]
-    fn run_if_i32_ge_s() {
+    fn run_if_then_i32_ge_s() {
         let file_path = "test/fixtures/if_i32_ge_s.wasm";
         let mut bytes = std::fs::read(file_path).expect("file not found");
         let parser = parser::Parser::new().unwrap();
@@ -414,5 +414,30 @@ mod runtime_tests {
         let result = vm.execute(&instance, &keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(1)));
+    }
+
+    #[test]
+    fn run_if_else_i32_ge_s() {
+        let file_path = "test/fixtures/if_i32_ge_s.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&mut module);
+        let mut vm = Runtime::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let args = vec!["0"]
+            .iter()
+            .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+            .collect::<Vec<Value>>();
+        let result = vm.execute(&instance, &keys[0], Some(args));
+
+        assert_eq!(result, Some(Number::i32(0)));
     }
 }
