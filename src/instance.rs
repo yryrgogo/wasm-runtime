@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use crate::{
     module::ModuleNode,
-    node::{CodeNode, ExportTypeNode, FunctionNode, FunctionTypeNode, InstructionNode},
-    types::ValueType,
+    node::{ExportTypeNode, FunctionNode, FunctionTypeNode},
 };
 
 #[derive(Debug, Clone)]
 pub struct Instance {
-    pub exportMap: HashMap<String, Export>,
+    pub export_map: HashMap<String, Export>,
     pub functions: Vec<FunctionInstance>,
 }
 
@@ -16,10 +15,10 @@ impl Instance {
     pub fn new(module: &mut ModuleNode) -> Self {
         module.make();
         let functions = Instance::instantiate_functions(module);
-        let exportMap = Instance::instantiate_exports(module);
+        let export_map = Instance::instantiate_exports(module);
 
         Instance {
-            exportMap,
+            export_map,
             functions,
         }
     }
@@ -96,7 +95,7 @@ impl FunctionInstance {
 #[derive(Debug, Clone)]
 pub enum Export {
     Function { name: String, index: usize },
-    Table { name: String, index: usize },
-    Memory { name: String, index: usize },
-    Global { name: String, index: usize },
+    // Table { name: String, index: usize },
+    // Memory { name: String, index: usize },
+    // Global { name: String, index: usize },
 }

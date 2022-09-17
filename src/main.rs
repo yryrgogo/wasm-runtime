@@ -31,9 +31,8 @@ fn main() {
     // println!("emit wasm module\n{:#?}", module.buffer);
 
     let instance = instance::Instance::new(&mut module);
-    let mut runtime = Runtime::default();
     let keys = instance
-        .exportMap
+        .export_map
         .keys()
         .map(|k| k.to_string())
         .collect::<Vec<String>>();
@@ -42,7 +41,9 @@ fn main() {
         .iter()
         .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
         .collect::<Vec<Value>>();
-    let result = runtime.execute(&instance, &keys[0], Some(module_args));
+
+    let mut runtime = Runtime::new(instance);
+    let result = runtime.execute(&keys[0], Some(module_args));
     println!("{:#?}", runtime);
     println!("result: {:#?}", result);
 }
@@ -310,13 +311,14 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.execute(&instance, &keys[0], None);
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], None);
 
         assert_eq!(result, Some(Number::i32(42)));
     }
@@ -330,13 +332,14 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
-        let result = vm.execute(&instance, &keys[0], None);
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], None);
 
         assert_eq!(result, Some(Number::i32(55)));
     }
@@ -350,9 +353,8 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
@@ -361,7 +363,9 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.execute(&instance, &keys[0], Some(args));
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(3)));
     }
@@ -375,9 +379,8 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
@@ -386,7 +389,9 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.execute(&instance, &keys[0], Some(args));
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(-1)));
     }
@@ -400,9 +405,8 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
@@ -411,7 +415,9 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.execute(&instance, &keys[0], Some(args));
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(1)));
     }
@@ -425,9 +431,8 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
@@ -436,7 +441,9 @@ mod runtime_tests {
             .iter()
             .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
             .collect::<Vec<Value>>();
-        let result = vm.execute(&instance, &keys[0], Some(args));
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], Some(args));
 
         assert_eq!(result, Some(Number::i32(0)));
     }
@@ -450,14 +457,14 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
 
-        let result = vm.execute(&instance, &keys[0], None);
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], None);
 
         assert_eq!(result, Some(Number::i32(14)));
     }
@@ -471,14 +478,14 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
 
-        let result = vm.execute(&instance, &keys[0], None);
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], None);
 
         assert_eq!(result, None);
     }
@@ -492,15 +499,41 @@ mod runtime_tests {
         module.make();
 
         let instance = instance::Instance::new(&mut module);
-        let mut vm = Runtime::default();
         let keys = instance
-            .exportMap
+            .export_map
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>();
 
-        let result = vm.execute(&instance, &keys[0], None);
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], None);
 
         assert_eq!(result, Some(Number::i32(33)));
+    }
+
+    #[test]
+    fn run_increment_with_call_add_function() {
+        let file_path = "test/fixtures/increment.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&mut module);
+        let keys = instance
+            .export_map
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let args = vec!["5"]
+            .iter()
+            .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+            .collect::<Vec<Value>>();
+
+        let mut runtime = Runtime::new(instance);
+        let result = runtime.execute(&keys[0], Some(args));
+
+        assert_eq!(result, Some(Number::i32(6)));
     }
 }

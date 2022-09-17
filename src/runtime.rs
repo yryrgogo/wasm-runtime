@@ -52,6 +52,7 @@ impl Frame {
 
 #[derive(Debug, Clone)]
 pub struct Runtime {
+    instance: Instance,
     frames: Vec<Frame>,
     frame_index: usize,
     stack: Vec<StackEntry>,
@@ -61,9 +62,10 @@ pub struct Runtime {
     control_instructions: Vec<InstructionNode>,
 }
 
-impl Default for Runtime {
-    fn default() -> Self {
+impl Runtime {
+    pub fn new(instance: Instance) -> Self {
         Self {
+            instance,
             frames: vec![],
             frame_index: 0,
             stack: vec![],
@@ -73,9 +75,7 @@ impl Default for Runtime {
             control_instructions: vec![],
         }
     }
-}
 
-impl Runtime {
     fn push_frame(&mut self, function: FunctionInstance, args: Option<Vec<Value>>) {
         self.frames.push(Frame::new(function, args));
         self.frame_index += 1;
@@ -117,12 +117,6 @@ impl Runtime {
     }
 
     fn push_label(&mut self, label_type: LabelType, arity: BlockType, size: u32) {
-        dbg!(
-            "label type {:#?} arity: {:#?} label size {}",
-            &label_type,
-            &arity,
-            size
-        );
         self.push_stack(StackEntry::label(Label {
             label_type,
             arity,
@@ -151,27 +145,17 @@ impl Runtime {
         }
     }
 
-    pub fn execute(
-        &mut self,
-        instance: &Instance,
-        name: &String,
-        args: Option<Vec<Value>>,
-    ) -> Option<Number> {
-        let export = instance.exportMap.get(name).unwrap();
-        if let Export::Function { index, name: _ } = export {
-            let function = &instance.functions[*index];
-            self.push_frame(function.clone(), args);
-        } else {
-            panic!("cannot run non-function export");
+    pub fn execute(&mut self, name: &String, args: Option<Vec<Value>>) -> Option<Number> {
+        let export = &self.instance.export_map.get(name).unwrap();
+        match export {
+            Export::Function { index, name: _ } => {
+                let function = self.instance.functions[*index].clone();
+                self.push_frame(function.clone(), args);
+            }
         };
 
-        let mut frame = self.current_frame();
         while !self.frame_is_empty() {
-            while frame.ip < frame.function.code.body.len() {
-                let instruction = frame.next_instruction();
-                self.invoke(&mut frame, &instruction);
-            }
-            self.pop_frame();
+            self.call();
         }
         let entry = self.pop_result();
         match entry {
@@ -183,6 +167,15 @@ impl Runtime {
             },
             None => None,
         }
+    }
+
+    pub fn call(&mut self) {
+        let mut frame = self.current_frame();
+        while frame.ip < frame.function.code.body.len() {
+            let instruction = frame.next_instruction();
+            self.invoke(&mut frame, &instruction);
+        }
+        self.pop_frame();
     }
 
     pub fn invoke(&mut self, frame: &mut Frame, instruction: &InstructionNode) {
@@ -201,7 +194,6 @@ impl Runtime {
                     self.expression(frame, &node.expr);
                     if self.control_instructions.len() > 0 {
                         let control_instruction = self.control_instructions.pop().unwrap();
-                        dbg!("control instruction {:#?}", &control_instruction);
                         match control_instruction {
                             InstructionNode::Br(br_node) => {
                                 if br_node.depth > 0 {
@@ -234,7 +226,6 @@ impl Runtime {
             }
             InstructionNode::Else(_) => {}
             InstructionNode::Br(node) => {
-                dbg!("br: {}", node.depth);
                 self.control_instructions
                     .push(InstructionNode::Br(BrInstructionNode::new(node.depth)));
             }
@@ -242,7 +233,6 @@ impl Runtime {
                 let condition = self.pop_stack();
                 if let StackEntry::value(Value::num(Number::i32(value))) = condition {
                     if value != 0 {
-                        dbg!("br_if: {}", node.depth);
                         self.control_instructions
                             .push(InstructionNode::Br(BrInstructionNode::new(node.depth)));
                     }
@@ -250,7 +240,24 @@ impl Runtime {
                     panic!("br_if condition must be i32");
                 }
             }
-            InstructionNode::Call(_) => todo!(),
+            InstructionNode::Call(node) => {
+                let function = self.instance.functions[node.function_index as usize].clone();
+                let mut args: Vec<Value> = vec![];
+                function
+                    .function_type
+                    .params
+                    .val_types
+                    .iter()
+                    .for_each(|_| {
+                        let entry = self.pop_stack();
+                        if let StackEntry::value(v) = entry {
+                            args.push(v);
+                        }
+                    });
+
+                self.push_frame(function, Some(args));
+                self.call();
+            }
             InstructionNode::End(_) => {}
             InstructionNode::GetLocal(node) => {
                 let value = frame.get_local(node.index as usize);
