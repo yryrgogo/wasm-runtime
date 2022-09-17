@@ -12,9 +12,11 @@ use crate::{
         BlockInstructionNode, BrIfInstructionNode, BrInstructionNode, CallInstructionNode,
         CodeNode, ElseInstructionNode, EndInstructionNode, ExportDescNode, ExportNode,
         ExportTypeNode, ExpressionNode, FunctionTypeNode, GetLocalInstructionNode,
-        I32AddInstructionNode, I32ConstInstructionNode, I32GeSInstructionNode,
-        I32SubInstructionNode, IfInstructionNode, InstructionNode, LocalEntryNode,
-        LoopInstructionNode, ResultTypeNode, SetLocalInstructionNode,
+        I32AddInstructionNode, I32ConstInstructionNode, I32EqzInstructionNode,
+        I32GeSInstructionNode, I32LtSInstructionNode, I32LtUInstructionNode,
+        I32RemSInstructionNode, I32RemUInstructionNode, I32SubInstructionNode, IfInstructionNode,
+        InstructionNode, LocalEntryNode, LoopInstructionNode, ResultTypeNode,
+        SetLocalInstructionNode,
     },
     types::{BlockType, ValueType},
 };
@@ -372,11 +374,20 @@ impl Parser {
             Instruction::I64Const => todo!(),
             Instruction::F32Const => todo!(),
             Instruction::F64Const => todo!(),
-            Instruction::I32Eqz => todo!(),
+            Instruction::I32Eqz => {
+                let node = InstructionNode::I32Eqz(I32EqzInstructionNode::default());
+                Ok(node)
+            }
             Instruction::I32Eq => todo!(),
             Instruction::I32Ne => todo!(),
-            Instruction::I32LtS => todo!(),
-            Instruction::I32LtU => todo!(),
+            Instruction::I32LtS => {
+                let node = InstructionNode::I32LtS(I32LtSInstructionNode::default());
+                Ok(node)
+            }
+            Instruction::I32LtU => {
+                let node = InstructionNode::I32LtU(I32LtUInstructionNode::default());
+                Ok(node)
+            }
             Instruction::I32GtS => todo!(),
             Instruction::I32GtU => todo!(),
             Instruction::I32LeS => todo!(),
@@ -423,8 +434,14 @@ impl Parser {
             Instruction::I32Mul => todo!(),
             Instruction::I32DivS => todo!(),
             Instruction::I32DivU => todo!(),
-            Instruction::I32RemS => todo!(),
-            Instruction::I32RemU => todo!(),
+            Instruction::I32RemS => {
+                let node = InstructionNode::I32RemS(I32RemSInstructionNode::default());
+                Ok(node)
+            }
+            Instruction::I32RemU => {
+                let node = InstructionNode::I32RemU(I32RemUInstructionNode::default());
+                Ok(node)
+            }
             Instruction::I32And => todo!(),
             Instruction::I32Or => todo!(),
             Instruction::I32Xor => todo!(),

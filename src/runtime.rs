@@ -150,13 +150,10 @@ impl Runtime {
         match export {
             Export::Function { index, name: _ } => {
                 let function = self.instance.functions[*index].clone();
-                self.push_frame(function.clone(), args);
+                self.call(function.clone(), args);
             }
         };
 
-        while !self.frame_is_empty() {
-            self.call();
-        }
         let entry = self.pop_result();
         match entry {
             Some(entry) => match entry {
@@ -169,7 +166,8 @@ impl Runtime {
         }
     }
 
-    pub fn call(&mut self) {
+    pub fn call(&mut self, function: FunctionInstance, args: Option<Vec<Value>>) {
+        self.push_frame(function, args);
         let mut frame = self.current_frame();
         while frame.ip < frame.function.code.body.len() {
             let instruction = frame.next_instruction();
@@ -222,11 +220,12 @@ impl Runtime {
                     if value != 0 {
                         self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &node.then_expr);
+                        self.cleanup_block_label(node.block_type);
                     } else if let Some(else_) = node.else_expr.clone() {
                         self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &else_);
+                        self.cleanup_block_label(node.block_type);
                     }
-                    self.cleanup_block_label(node.block_type);
                 } else {
                     panic!("if condition must be i32");
                 }
@@ -262,8 +261,7 @@ impl Runtime {
                         }
                     });
 
-                self.push_frame(function, Some(args));
-                self.call();
+                self.call(function, Some(args));
             }
             InstructionNode::End(_) => {}
             InstructionNode::GetLocal(node) => {
@@ -391,6 +389,35 @@ impl Runtime {
                     _ => panic!("i32.eq must have two i32 values on the stack"),
                 }
             }
+            InstructionNode::I32LtS(_) => {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(Number::i32(if lhs < rhs {
+                            1
+                        } else {
+                            0
+                        }))));
+                    }
+                    _ => panic!("i32.lt_s must have two i32 values on the stack"),
+                }
+            }
+            InstructionNode::I32LtU(_) => {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(Number::i32(if lhs < rhs {
+                            1
+                        } else {
+                            0
+                        }))));
+                    }
+                    _ => panic!("i32.lt_u must have two i32 values on the stack"),
+                }
+            }
+            InstructionNode::I32RemU(_) => todo!(),
         };
     }
 

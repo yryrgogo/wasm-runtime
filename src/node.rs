@@ -286,12 +286,12 @@ pub enum InstructionNode {
     I32Add(I32AddInstructionNode),
     I32Sub(I32SubInstructionNode),
     I32RemS(I32RemSInstructionNode),
-    // I32RemU(I32RemUInstructionNode),
+    I32RemU(I32RemUInstructionNode),
     // I32Shl(I32ShlInstructionNode),
     I32Eqz(I32EqzInstructionNode),
     I32Eq(I32EqInstructionNode),
-    // I32LtS(I32LtSInstructionNode),
-    // I32LtU(I32LtUInstructionNode),
+    I32LtS(I32LtSInstructionNode),
+    I32LtU(I32LtUInstructionNode),
     I32GeS(I32GeSInstructionNode),
     // I32GeU(I32GeUInstructionNode),
     // I32GtS(I32GtSInstructionNode),
@@ -321,12 +321,12 @@ impl Node for InstructionNode {
             InstructionNode::I32Add(x) => x.size(),
             // InstructionNode::I32Sub(x) => x.size(),
             InstructionNode::I32RemS(x) => x.size(),
-            // InstructionNode::I32RemU(x) => x.size(),
+            InstructionNode::I32RemU(x) => x.size(),
             // InstructionNode::I32Shl(x) => x.size(),
             InstructionNode::I32Eqz(x) => x.size(),
             InstructionNode::I32Eq(x) => x.size(),
-            // InstructionNode::I32LtS(x) => x.size(),
-            // InstructionNode::I32LtU(x) => x.size(),
+            InstructionNode::I32LtS(x) => x.size(),
+            InstructionNode::I32LtU(x) => x.size(),
             InstructionNode::I32GeS(x) => x.size(),
             InstructionNode::I32Sub(x) => x.size(),
             // InstructionNode::I32GeU(x) => x.size(),
@@ -357,12 +357,12 @@ impl Node for InstructionNode {
             InstructionNode::I32Add(x) => x.encode(),
             // InstructionNode::I32Sub(x) => x.encode(),
             InstructionNode::I32RemS(x) => x.encode(),
-            // InstructionNode::I32RemU(x) => x.encode(),
+            InstructionNode::I32RemU(x) => x.encode(),
             // InstructionNode::I32Shl(x) => x.encode(),
             InstructionNode::I32Eqz(x) => x.encode(),
             InstructionNode::I32Eq(x) => x.encode(),
-            // InstructionNode::I32LtS(x) => x.encode(),
-            // InstructionNode::I32LtU(x) => x.encode(),
+            InstructionNode::I32LtS(x) => x.encode(),
+            InstructionNode::I32LtU(x) => x.encode(),
             InstructionNode::I32GeS(x) => x.encode(),
             InstructionNode::I32Sub(x) => x.encode(),
             // InstructionNode::I32GeU(x) => x.encode(),
@@ -612,7 +612,7 @@ pub struct I32RemSInstructionNode {
 
 impl Default for I32RemSInstructionNode {
     fn default() -> Self {
-        Self { opcode: 0x70 }
+        Self { opcode: 0x6f }
     }
 }
 

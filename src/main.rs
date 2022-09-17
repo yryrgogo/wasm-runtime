@@ -536,4 +536,41 @@ mod runtime_tests {
 
         assert_eq!(result, Some(Number::i32(6)));
     }
+
+    #[test]
+    fn run_gcd() {
+        let file_path = "test/fixtures/gcd.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&mut module);
+        let keys = instance
+            .export_map
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let test_list = [
+            vec!["10", "20", "10"],
+            vec!["8", "12", "4"],
+            vec!["16", "28", "4"],
+            vec!["75", "90", "15"],
+            vec!["1024", "1280", "256"],
+            vec!["960", "98304", "192"],
+            vec!["124816", "84218400", "16"],
+        ];
+        let mut runtime = Runtime::new(instance);
+        for tmp in test_list {
+            let args = tmp
+                .iter()
+                .map(|s| Value::num(Number::i32(s.parse::<i32>().unwrap())))
+                .collect::<Vec<Value>>();
+
+            let result = runtime.execute(&keys[0], Some(args[0..2].to_vec()));
+
+            assert_eq!(result, Some(Number::i32(tmp[2].parse::<i32>().unwrap())));
+        }
+    }
 }
