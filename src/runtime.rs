@@ -186,7 +186,17 @@ impl Runtime {
             InstructionNode::Block(node) => {
                 self.push_label(LabelType::Block, node.block_type, node.size);
                 self.expression(frame, &node.expr);
-                self.cleanup_block_label(node.block_type);
+                if self.control_instructions.len() > 0 {
+                    let control_instruction = self.control_instructions.pop().unwrap();
+                    match control_instruction {
+                        InstructionNode::Br(br_node) => {
+                            self.jump_to_label(br_node.depth);
+                        }
+                        _ => todo!("unimplemented control instruction"),
+                    }
+                } else {
+                    self.cleanup_block_label(node.block_type);
+                }
             }
             InstructionNode::Loop(node) => {
                 self.push_label(LabelType::Loop, node.block_type, node.size);
@@ -197,7 +207,7 @@ impl Runtime {
                         match control_instruction {
                             InstructionNode::Br(br_node) => {
                                 if br_node.depth > 0 {
-                                    self.cleanup_block_label(node.block_type);
+                                    self.jump_to_label(br_node.depth);
                                     break;
                                 }
                             }
@@ -212,14 +222,11 @@ impl Runtime {
                     if value != 0 {
                         self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &node.then_expr);
-                        self.cleanup_block_label(node.block_type);
                     } else if let Some(else_) = node.else_expr.clone() {
                         self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &else_);
-                        let result = self.pop_stack();
-                        self.pop_label();
-                        self.push_stack(result);
                     }
+                    self.cleanup_block_label(node.block_type);
                 } else {
                     panic!("if condition must be i32");
                 }
@@ -393,6 +400,15 @@ impl Runtime {
             if self.control_instructions.len() > 0 {
                 break;
             }
+        }
+    }
+
+    fn jump_to_label(&mut self, depth: usize) {
+        // TODO: br でも stack に戻り値を push する必要があるか不明のため、必要であれば直す
+        self.cleanup_block_label(BlockType::Empty);
+        if depth > 0 {
+            self.control_instructions
+                .push(InstructionNode::Br(BrInstructionNode::new(depth - 1)));
         }
     }
 
