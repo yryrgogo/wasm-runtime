@@ -330,35 +330,60 @@ impl Runtime {
                     _ => panic!("i32.rem_s must have two i32 values on the stack"),
                 }
             } // InstructionNode::I32RemU => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a % b);
-              // }
-              // InstructionNode::I32And => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a & b);
-              // }
-              // InstructionNode::I32Or => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a | b);
-              // }
-              // InstructionNode::I32Xor => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a ^ b);
-              // }
-              // InstructionNode::I32Shl => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a << b);
-              // }
-              // InstructionNode::I32ShrS => {
-              //     let rhs = frame.pop_u32();
-              //     let lhs = frame.pop_u32();
-              //     frame.push_u32(a >> b);
-              // }
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a % b);
+            // }
+            // InstructionNode::I32And => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a & b);
+            // }
+            // InstructionNode::I32Or => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a | b);
+            // }
+            // InstructionNode::I32Xor => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a ^ b);
+            // }
+            // InstructionNode::I32Shl => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a << b);
+            // }
+            // InstructionNode::I32ShrS => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a >> b);
+            // }
+            InstructionNode::I32Eqz(_) => {
+                let v = self.pop_stack();
+                match v {
+                    StackEntry::value(Value::num(Number::i32(v))) => {
+                        self.push_stack(StackEntry::value(Value::num(Number::i32(if v == 0 {
+                            1
+                        } else {
+                            0
+                        }))));
+                    }
+                    _ => panic!("i32.eqz must have one i32 value on the stack"),
+                }
+            }
+            InstructionNode::I32Eq(_) => {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(Number::i32(
+                            if lhs == rhs { 1 } else { 0 },
+                        ))));
+                    }
+                    _ => panic!("i32.eq must have two i32 values on the stack"),
+                }
+            }
         };
     }
 
