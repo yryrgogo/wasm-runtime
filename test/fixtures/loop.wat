@@ -4,12 +4,14 @@
     (local $sum i32)
     (local.set $sum (i32.const 0))
     (local.set $i (i32.const 0))
-    (block $block (loop $loop
-    (br_if $block (i32.ge_s (local.get $i) (i32.const 3)))
-    (local.set $i (i32.add (local.get $i) (i32.const 1)))
-    (local.set $sum (i32.add (local.get $sum) (i32.const 11)))
-    (br $loop)
-    ))
+    (block $block
+      (loop $loop
+        (br_if $block (i32.ge_s (local.get $i) (i32.const 3)))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (local.set $sum (i32.add (local.get $sum) (i32.const 11)))
+        (br $loop)
+      )
+    )
     (local.get $sum)
   )
 )

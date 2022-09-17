@@ -183,7 +183,7 @@ impl Parser {
         }
 
         let expr = self
-            .expression(bytes, None)
+            .expression(bytes, None, &mut 0)
             .expect("Failed to parse expression");
 
         Ok(CodeNode {
@@ -211,6 +211,7 @@ impl Parser {
         &self,
         bytes: &mut Vec<u8>,
         default_instructions: impl IntoIterator<Item = InstructionNode>,
+        size: &mut u32,
     ) -> Result<ExpressionNode, Box<dyn Error>> {
         let mut instructions: Vec<InstructionNode> = vec![];
         default_instructions
@@ -221,6 +222,7 @@ impl Parser {
             let instruction = self
                 .instruction(bytes)
                 .expect("Failed to parse instruction");
+            *size += 1;
             match instruction {
                 InstructionNode::End(end_instr) => {
                     instructions.push(InstructionNode::End(end_instr));
@@ -248,26 +250,29 @@ impl Parser {
             Instruction::Nop => todo!(),
             Instruction::Block => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let mut size = 0;
                 let expr = self
-                    .expression(bytes, None)
+                    .expression(bytes, None, &mut size)
                     .expect("Failed to parse expression");
                 Ok(InstructionNode::Block(BlockInstructionNode::new(
-                    block_type, expr,
+                    block_type, expr, size,
                 )))
             }
             Instruction::Loop => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let mut size = 0;
                 let expr = self
-                    .expression(bytes, None)
+                    .expression(bytes, None, &mut size)
                     .expect("Failed to parse expression");
                 Ok(InstructionNode::Loop(LoopInstructionNode::new(
-                    block_type, expr,
+                    block_type, expr, size,
                 )))
             }
             Instruction::If => {
                 let block_type = self.block_type(bytes).expect("Failed to parse block type");
+                let mut size = 0;
                 let mut then_expr = self
-                    .expression(bytes, None)
+                    .expression(bytes, None, &mut size)
                     .expect("Failed to parse if-then expression");
                 let last_instr = then_expr
                     .instructions
@@ -277,18 +282,19 @@ impl Parser {
                 match last_instr {
                     InstructionNode::Else(_) => {
                         let else_expr = self
-                            .expression(bytes, [last_instr.clone()])
+                            .expression(bytes, [last_instr.clone()], &mut size)
                             .expect("Failed to parse if-else expression");
                         Ok(InstructionNode::If(IfInstructionNode::new(
                             block_type,
                             then_expr,
                             Some(else_expr),
+                            size,
                         )))
                     }
                     InstructionNode::End(_) => {
                         then_expr.instructions.push(last_instr);
                         Ok(InstructionNode::If(IfInstructionNode::new(
-                            block_type, then_expr, None,
+                            block_type, then_expr, None, size,
                         )))
                     }
                     _ => panic!("Invalid if-then expression"),
@@ -301,11 +307,13 @@ impl Parser {
             Instruction::End => Ok(InstructionNode::End(EndInstructionNode::default())),
             Instruction::Br => {
                 let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br depth");
-                Ok(InstructionNode::Br(BrInstructionNode::new(depth)))
+                Ok(InstructionNode::Br(BrInstructionNode::new(depth as usize)))
             }
             Instruction::BrIf => {
                 let (depth, _) = Parser::read_u32(bytes).expect("Failed to parse br if depth");
-                Ok(InstructionNode::BrIf(BrIfInstructionNode::new(depth)))
+                Ok(InstructionNode::BrIf(BrIfInstructionNode::new(
+                    depth as usize,
+                )))
             }
             Instruction::BrTable => todo!(),
             Instruction::Return => todo!(),

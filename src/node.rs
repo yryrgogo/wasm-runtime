@@ -797,6 +797,7 @@ pub struct IfInstructionNode {
     pub block_type: BlockType,
     pub then_expr: ExpressionNode,
     pub else_expr: Option<ExpressionNode>,
+    pub size: u32,
 }
 
 impl IfInstructionNode {
@@ -804,12 +805,14 @@ impl IfInstructionNode {
         block_type: BlockType,
         then_expr: ExpressionNode,
         else_expr: Option<ExpressionNode>,
+        size: u32,
     ) -> Self {
         Self {
             opcode: 0x04,
             block_type,
             then_expr,
             else_expr,
+            size,
         }
     }
 }
@@ -864,14 +867,16 @@ pub struct BlockInstructionNode {
     opcode: u8,
     pub block_type: BlockType,
     pub expr: ExpressionNode,
+    pub size: u32,
 }
 
 impl BlockInstructionNode {
-    pub fn new(block_type: BlockType, expr: ExpressionNode) -> Self {
+    pub fn new(block_type: BlockType, expr: ExpressionNode, size: u32) -> Self {
         Self {
             opcode: 0x02,
             block_type,
             expr,
+            size,
         }
     }
 }
@@ -899,14 +904,16 @@ pub struct LoopInstructionNode {
     opcode: u8,
     pub block_type: BlockType,
     pub expr: ExpressionNode,
+    pub size: u32,
 }
 
 impl LoopInstructionNode {
-    pub fn new(block_type: BlockType, expr: ExpressionNode) -> Self {
+    pub fn new(block_type: BlockType, expr: ExpressionNode, size: u32) -> Self {
         Self {
             opcode: 0x03,
             block_type,
             expr,
+            size,
         }
     }
 }
@@ -932,11 +939,11 @@ impl Node for LoopInstructionNode {
 #[derive(Debug, Clone)]
 pub struct BrInstructionNode {
     opcode: u8,
-    pub depth: u32,
+    pub depth: usize,
 }
 
 impl BrInstructionNode {
-    pub fn new(depth: u32) -> Self {
+    pub fn new(depth: usize) -> Self {
         Self {
             opcode: 0x0c,
             depth,
@@ -948,14 +955,14 @@ impl Node for BrInstructionNode {
     fn size(&self) -> u32 {
         let mut size = 0;
         size += 1; // opcode
-        size += encode_u32_to_leb128(self.depth).len() as u32;
+        size += encode_u32_to_leb128(self.depth as u32).len() as u32;
         size
     }
 
     fn encode(&self) -> Vec<u8> {
         let mut buffer = vec![];
         buffer.push(self.opcode);
-        buffer.extend(encode_u32_to_leb128(self.depth));
+        buffer.extend(encode_u32_to_leb128(self.depth as u32));
         buffer
     }
 }
@@ -963,11 +970,11 @@ impl Node for BrInstructionNode {
 #[derive(Debug, Clone)]
 pub struct BrIfInstructionNode {
     opcode: u8,
-    pub depth: u32,
+    pub depth: usize,
 }
 
 impl BrIfInstructionNode {
-    pub fn new(depth: u32) -> Self {
+    pub fn new(depth: usize) -> Self {
         Self {
             opcode: 0x0d,
             depth,
@@ -979,14 +986,14 @@ impl Node for BrIfInstructionNode {
     fn size(&self) -> u32 {
         let mut size = 0;
         size += 1; // opcode
-        size += encode_u32_to_leb128(self.depth).len() as u32;
+        size += encode_u32_to_leb128(self.depth as u32).len() as u32;
         size
     }
 
     fn encode(&self) -> Vec<u8> {
         let mut buffer = vec![];
         buffer.push(self.opcode);
-        buffer.extend(encode_u32_to_leb128(self.depth));
+        buffer.extend(encode_u32_to_leb128(self.depth as u32));
         buffer
     }
 }

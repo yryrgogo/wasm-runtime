@@ -1,6 +1,6 @@
 use crate::{
     instance::{Export, FunctionInstance, Instance},
-    node::{ExpressionNode, InstructionNode},
+    node::{BrInstructionNode, ExpressionNode, InstructionNode},
     stack::{Label, LabelType, Number, StackEntry, Value},
     types::{BlockType, NumberType, ValueType},
 };
@@ -9,7 +9,6 @@ use crate::{
 pub struct Frame {
     function: FunctionInstance,
     locals: Vec<Option<Value>>,
-    base_pointer: usize,
     ip: usize,
 }
 
@@ -26,14 +25,12 @@ impl Frame {
             Frame {
                 function,
                 locals,
-                base_pointer: 0,
                 ip: 0,
             }
         } else {
             Frame {
                 function,
                 locals: vec![None; local_count],
-                base_pointer: 0,
                 ip: 0,
             }
         }
@@ -61,6 +58,7 @@ pub struct Runtime {
     sp: usize,
     depth: usize,
     label_positions: Vec<usize>,
+    control_instructions: Vec<InstructionNode>,
 }
 
 impl Default for Runtime {
@@ -72,6 +70,7 @@ impl Default for Runtime {
             sp: 0,
             depth: 0,
             label_positions: vec![],
+            control_instructions: vec![],
         }
     }
 }
@@ -117,8 +116,18 @@ impl Runtime {
         }
     }
 
-    fn push_label(&mut self, label_type: LabelType, arity: BlockType) {
-        self.push_stack(StackEntry::label(Label { label_type, arity }));
+    fn push_label(&mut self, label_type: LabelType, arity: BlockType, size: u32) {
+        dbg!(
+            "label type {:#?} arity: {:#?} label size {}",
+            &label_type,
+            &arity,
+            size
+        );
+        self.push_stack(StackEntry::label(Label {
+            label_type,
+            arity,
+            size: size as usize,
+        }));
         self.label_positions.push(self.sp - 1);
     }
 
@@ -129,6 +138,17 @@ impl Runtime {
             .unwrap_or_else(|| panic!("No label to pop"));
         let _ = self.stack.split_off(label_idx);
         self.sp = label_idx;
+    }
+
+    fn get_label(&mut self, depth: usize) -> Label {
+        self.label_positions.reverse();
+        let label_idx = self.label_positions[depth];
+        self.label_positions.reverse();
+
+        match &self.stack[label_idx] {
+            StackEntry::label(label) => label.clone(),
+            _ => panic!("Stack entry is not a label"),
+        }
     }
 
     pub fn execute(
@@ -171,24 +191,38 @@ impl Runtime {
                 self.push_stack(StackEntry::value(Value::num(Number::i32(node.value))));
             }
             InstructionNode::Block(node) => {
-                self.push_label(LabelType::Block, node.block_type);
+                self.push_label(LabelType::Block, node.block_type, node.size);
                 self.expression(frame, &node.expr);
                 self.cleanup_block_label(node.block_type);
             }
             InstructionNode::Loop(node) => {
-                self.push_label(LabelType::Loop, node.block_type);
-                self.expression(frame, &node.expr);
-                self.cleanup_block_label(node.block_type);
+                self.push_label(LabelType::Loop, node.block_type, node.size);
+                loop {
+                    self.expression(frame, &node.expr);
+                    if self.control_instructions.len() > 0 {
+                        let control_instruction = self.control_instructions.pop().unwrap();
+                        dbg!("control instruction {:#?}", &control_instruction);
+                        match control_instruction {
+                            InstructionNode::Br(br_node) => {
+                                if br_node.depth > 0 {
+                                    self.cleanup_block_label(node.block_type);
+                                    break;
+                                }
+                            }
+                            _ => todo!("unimplemented control instruction"),
+                        }
+                    }
+                }
             }
             InstructionNode::If(node) => {
                 let condition = self.pop_stack();
                 if let StackEntry::value(Value::num(Number::i32(value))) = condition {
                     if value != 0 {
-                        self.push_label(LabelType::If, node.block_type);
+                        self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &node.then_expr);
                         self.cleanup_block_label(node.block_type);
                     } else if let Some(else_) = node.else_expr.clone() {
-                        self.push_label(LabelType::If, node.block_type);
+                        self.push_label(LabelType::If, node.block_type, node.size);
                         self.expression(frame, &else_);
                         let result = self.pop_stack();
                         self.pop_label();
@@ -199,8 +233,23 @@ impl Runtime {
                 }
             }
             InstructionNode::Else(_) => {}
-            InstructionNode::Br(_) => todo!(),
-            InstructionNode::BrIf(_) => todo!(),
+            InstructionNode::Br(node) => {
+                dbg!("br: {}", node.depth);
+                self.control_instructions
+                    .push(InstructionNode::Br(BrInstructionNode::new(node.depth)));
+            }
+            InstructionNode::BrIf(node) => {
+                let condition = self.pop_stack();
+                if let StackEntry::value(Value::num(Number::i32(value))) = condition {
+                    if value != 0 {
+                        dbg!("br_if: {}", node.depth);
+                        self.control_instructions
+                            .push(InstructionNode::Br(BrInstructionNode::new(node.depth)));
+                    }
+                } else {
+                    panic!("br_if condition must be i32");
+                }
+            }
             InstructionNode::Call(_) => todo!(),
             InstructionNode::End(_) => {}
             InstructionNode::GetLocal(node) => {
@@ -299,13 +348,16 @@ impl Runtime {
               //     let b = frame.pop_u32();
               //     frame.push_u32(a >> b);
               // }
-        }
+        };
     }
 
     pub fn expression(&mut self, frame: &mut Frame, expr: &ExpressionNode) {
-        expr.instructions.iter().for_each(|instruction| {
+        for instruction in expr.instructions.iter() {
             self.invoke(frame, instruction);
-        });
+            if self.control_instructions.len() > 0 {
+                break;
+            }
+        }
     }
 
     fn cleanup_block_label(&mut self, block_type: BlockType) {

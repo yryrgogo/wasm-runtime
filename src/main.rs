@@ -482,4 +482,25 @@ mod runtime_tests {
 
         assert_eq!(result, None);
     }
+
+    #[test]
+    fn run_loop() {
+        let file_path = "test/fixtures/loop.wasm";
+        let mut bytes = std::fs::read(file_path).expect("file not found");
+        let parser = parser::Parser::new().unwrap();
+        let mut module = parser.parse(&mut bytes).expect("Failed to parse");
+        module.make();
+
+        let instance = instance::Instance::new(&mut module);
+        let mut vm = Runtime::default();
+        let keys = instance
+            .exportMap
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let result = vm.execute(&instance, &keys[0], None);
+
+        assert_eq!(result, Some(Number::i32(33)));
+    }
 }

@@ -12,9 +12,10 @@ pub enum StackEntry {
 pub struct Label {
     pub label_type: LabelType,
     pub arity: BlockType,
+    pub size: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LabelType {
     Block,
     Loop,
