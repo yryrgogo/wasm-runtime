@@ -273,9 +273,9 @@ impl Runtime {
                 }
             }
             InstructionNode::I32Add(_) => {
-                let a = self.pop_stack();
-                let b = self.pop_stack();
-                match (a, b) {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
                     (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
                         self.push_stack(StackEntry::value(Value::num(a + b)));
                     }
@@ -283,21 +283,21 @@ impl Runtime {
                 }
             }
             InstructionNode::I32Sub(_) => {
-                let a = self.pop_stack();
-                let b = self.pop_stack();
-                match (a, b) {
-                    (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
-                        self.push_stack(StackEntry::value(Value::num(b - a)));
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(lhs - rhs)));
                     }
                     _ => panic!("i32.sub must have two i32 values on the stack"),
                 }
             }
             InstructionNode::I32GeS(_) => {
-                let a = self.pop_stack();
-                let b = self.pop_stack();
-                match (a, b) {
-                    (StackEntry::value(Value::num(a)), StackEntry::value(Value::num(b))) => {
-                        self.push_stack(StackEntry::value(Value::num(if b >= a {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(if lhs >= rhs {
                             Number::i32(1)
                         } else {
                             Number::i32(0)
@@ -306,53 +306,57 @@ impl Runtime {
                     _ => panic!("i32.ge_s must have two i32 values on the stack"),
                 }
             } // InstructionNode::I32Mul => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
-              //     frame.push_u32(a * b);
-              // }
-              // InstructionNode::I32DivS => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
-              //     frame.push_u32(a / b);
-              // }
-              // InstructionNode::I32DivU => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
-              //     frame.push_u32(a / b);
-              // }
-              // InstructionNode::I32RemS => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
-              //     frame.push_u32(a % b);
-              // }
-              // InstructionNode::I32RemU => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a * b);
+            // }
+            // InstructionNode::I32DivS => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a / b);
+            // }
+            // InstructionNode::I32DivU => {
+            //     let rhs = frame.pop_u32();
+            //     let lhs = frame.pop_u32();
+            //     frame.push_u32(a / b);
+            // }
+            InstructionNode::I32RemS(_) => {
+                let rhs = self.pop_stack();
+                let lhs = self.pop_stack();
+                match (rhs, lhs) {
+                    (StackEntry::value(Value::num(rhs)), StackEntry::value(Value::num(lhs))) => {
+                        self.push_stack(StackEntry::value(Value::num(lhs % rhs)));
+                    }
+                    _ => panic!("i32.rem_s must have two i32 values on the stack"),
+                }
+            } // InstructionNode::I32RemU => {
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a % b);
               // }
               // InstructionNode::I32And => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a & b);
               // }
               // InstructionNode::I32Or => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a | b);
               // }
               // InstructionNode::I32Xor => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a ^ b);
               // }
               // InstructionNode::I32Shl => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a << b);
               // }
               // InstructionNode::I32ShrS => {
-              //     let a = frame.pop_u32();
-              //     let b = frame.pop_u32();
+              //     let rhs = frame.pop_u32();
+              //     let lhs = frame.pop_u32();
               //     frame.push_u32(a >> b);
               // }
         };

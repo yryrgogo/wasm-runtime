@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use crate::types::BlockType;
 
@@ -86,6 +86,20 @@ impl Div for Number {
             (Number::i64(a), Number::i64(b)) => Number::i64(a / b),
             (Number::f32(a), Number::f32(b)) => Number::f32(a / b),
             (Number::f64(a), Number::f64(b)) => Number::f64(a / b),
+            _ => panic!("Cannot divide numbers of different types"),
+        }
+    }
+}
+
+impl Rem for Number {
+    type Output = Number;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Number::i32(a), Number::i32(b)) => Number::i32(a % b),
+            (Number::i64(a), Number::i64(b)) => Number::i64(a % b),
+            (Number::f32(a), Number::f32(b)) => Number::f32(a % b),
+            (Number::f64(a), Number::f64(b)) => Number::f64(a % b),
             _ => panic!("Cannot divide numbers of different types"),
         }
     }

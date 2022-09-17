@@ -285,6 +285,7 @@ pub enum InstructionNode {
     SetLocal(SetLocalInstructionNode),
     I32Add(I32AddInstructionNode),
     I32Sub(I32SubInstructionNode),
+    I32RemS(I32RemSInstructionNode),
     // I32RemU(I32RemUInstructionNode),
     // I32Shl(I32ShlInstructionNode),
     // I32Eqz(I32EqzInstructionNode),
@@ -319,6 +320,7 @@ impl Node for InstructionNode {
             InstructionNode::SetLocal(x) => x.size(),
             InstructionNode::I32Add(x) => x.size(),
             // InstructionNode::I32Sub(x) => x.size(),
+            InstructionNode::I32RemS(x) => x.size(),
             // InstructionNode::I32RemU(x) => x.size(),
             // InstructionNode::I32Shl(x) => x.size(),
             // InstructionNode::I32Eqz(x) => x.size(),
@@ -354,6 +356,7 @@ impl Node for InstructionNode {
             InstructionNode::SetLocal(x) => x.encode(),
             InstructionNode::I32Add(x) => x.encode(),
             // InstructionNode::I32Sub(x) => x.encode(),
+            InstructionNode::I32RemS(x) => x.encode(),
             // InstructionNode::I32RemU(x) => x.encode(),
             // InstructionNode::I32Shl(x) => x.encode(),
             // InstructionNode::I32Eqz(x) => x.encode(),
@@ -593,6 +596,27 @@ impl Default for I32RemUInstructionNode {
 }
 
 impl Node for I32RemUInstructionNode {
+    fn size(&self) -> u32 {
+        1
+    }
+
+    fn encode(&self) -> Vec<u8> {
+        vec![self.opcode]
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct I32RemSInstructionNode {
+    opcode: u8,
+}
+
+impl Default for I32RemSInstructionNode {
+    fn default() -> Self {
+        Self { opcode: 0x70 }
+    }
+}
+
+impl Node for I32RemSInstructionNode {
     fn size(&self) -> u32 {
         1
     }
